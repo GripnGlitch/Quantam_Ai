@@ -1,2 +1,2 @@
 # Quantam_Ai
-The ai for future
+The AI that is your benifit!
