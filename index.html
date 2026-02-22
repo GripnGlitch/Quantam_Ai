@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quantam AI – by AItantrums</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   QUANTAM AI — DESIGN SYSTEM
+   Theme: "Void Intelligence" — dark cosmic
+   brutalism with neon circuitry accents
+═══════════════════════════════════════════ */
+:root {
+  --bg:        #030508;
+  --bg2:       #070b14;
+  --surface:   #0a1020;
+  --card:      #0e1628;
+  --card2:     #121e35;
+  --border:    rgba(0,220,255,0.1);
+  --border-hi: rgba(0,220,255,0.25);
+  --cyan:      #00dcff;
+  --cyan-dim:  rgba(0,220,255,0.15);
+  --purple:    #7c5cfc;
+  --purple-dim:rgba(124,92,252,0.15);
+  --green:     #00ffb0;
+  --green-dim: rgba(0,255,176,0.1);
+  --amber:     #ffb347;
+  --red:       #ff4d6d;
+  --text:      #c8e4ff;
+  --text2:     #6a8fac;
+  --text3:     #2e4a65;
+  --sidebar-w: 270px;
+  --font:      'Syne', sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+  --serif:     'Fraunces', serif;
+  --ease:      cubic-bezier(0.4,0,0.2,1);
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--font); -webkit-font-smoothing:antialiased; }
+
+/* ──── SCROLLBARS ──── */
+* { scrollbar-width:thin; scrollbar-color:var(--border-hi) transparent; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-thumb { background:var(--border-hi); border-radius:4px; }
+
+/* ──── PARTICLE BG ──── */
+#particle-bg { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+/* ══════════════════════════════════════
+   SHELL LAYOUT
+══════════════════════════════════════ */
+#shell {
+  position:relative; z-index:1;
+  display:flex; height:100vh; width:100vw; overflow:hidden;
+}
+
+/* ══════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════ */
+#sidebar {
+  width:var(--sidebar-w); flex-shrink:0;
+  background:rgba(7,11,20,0.97);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  transition:transform 0.32s var(--ease), width 0.32s var(--ease);
+  z-index:20; backdrop-filter:blur(24px);
+  position:relative;
+}
+#sidebar.closed {
+  transform:translateX(calc(-1 * var(--sidebar-w)));
+  position:absolute; height:100%;
+}
+
+/* sidebar logo */
+.sb-logo {
+  padding:16px 14px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+}
+.orb {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:radial-gradient(circle at 35% 35%, rgba(0,220,255,0.2), rgba(124,92,252,0.1));
+  border:1.5px solid var(--cyan);
+  box-shadow:0 0 14px rgba(0,220,255,0.35);
+  display:flex; align-items:center; justify-content:center; font-size:17px;
+  animation:orb-breathe 3s ease-in-out infinite;
+}
+@keyframes orb-breathe {
+  0%,100% { box-shadow:0 0 14px rgba(0,220,255,0.35); }
+  50%      { box-shadow:0 0 26px rgba(0,220,255,0.7), 0 0 50px rgba(124,92,252,0.25); }
+}
+.orb-text .name { font-size:13px; font-weight:800; letter-spacing:2.5px; color:var(--cyan); }
+.orb-text .by   { font-size:9px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; margin-top:1px; }
+
+/* new chat button */
+.new-chat {
+  margin:10px 10px 6px;
+  padding:10px 14px; border-radius:10px;
+  background:linear-gradient(135deg, rgba(0,220,255,0.08), rgba(124,92,252,0.08));
+  border:1px solid var(--border-hi);
+  font-family:var(--font); font-size:12px; font-weight:600;
+  color:var(--cyan); cursor:pointer; letter-spacing:1px;
+  display:flex; align-items:center; gap:8px;
+  transition:all 0.2s; text-transform:uppercase;
+}
+.new-chat:hover {
+  background:linear-gradient(135deg, rgba(0,220,255,0.15), rgba(124,92,252,0.15));
+  box-shadow:0 0 16px rgba(0,220,255,0.12);
+}
+.new-chat .plus { font-size:18px; line-height:1; }
+
+/* ai model selector grid */
+.sb-section { padding:8px 10px 4px; }
+.sb-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); padding:0 4px 6px; }
+
+.model-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:4px;
+  max-height:220px; overflow-y:auto;
+}
+.model-chip {
+  padding:6px 8px; border-radius:8px; border:1px solid var(--border);
+  font-size:10px; color:var(--text2); cursor:pointer;
+  transition:all 0.18s; display:flex; align-items:center; gap:5px;
+  background:transparent; font-family:var(--font); text-align:left;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.model-chip:hover { border-color:var(--border-hi); color:var(--text); }
+.model-chip.active {
+  border-color:var(--cyan); color:var(--cyan);
+  background:var(--cyan-dim);
+  box-shadow:0 0 8px rgba(0,220,255,0.15);
+}
+.model-chip .mi { font-size:12px; flex-shrink:0; }
+
+/* internet tool toggle rows */
+.search-tools { padding:6px 10px; }
+.tool-row {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:8px;
+  border:1px solid var(--border); margin-bottom:4px;
+  font-size:11px; color:var(--text2); cursor:pointer;
+  transition:all 0.18s; background:transparent;
+  font-family:var(--font);
+}
+.tool-row:hover { border-color:var(--border-hi); color:var(--text); background:rgba(0,220,255,0.03); }
+.tool-row.active { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+.tool-dot { width:6px; height:6px; border-radius:50%; background:var(--text3); flex-shrink:0; transition:background 0.18s; }
+.tool-row.active .tool-dot { background:var(--green); box-shadow:0 0 6px var(--green); }
+
+/* conversation history list */
+.history-list { flex:1; overflow-y:auto; padding:6px 10px; }
+.hist-item {
+  padding:8px 10px; border-radius:8px; font-size:11.5px;
+  color:var(--text2); cursor:pointer; transition:all 0.18s;
+  display:flex; align-items:center; gap:8px; margin-bottom:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.hist-item:hover { background:var(--card); color:var(--text); }
+.hist-item .hi { font-size:13px; flex-shrink:0; }
+
+/* sidebar footer / status */
+.sb-footer {
+  padding:10px 14px 14px; border-top:1px solid var(--border);
+  flex-shrink:0;
+}
+.sb-footer-row { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text3); }
+.status-led { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:led-blink 2s ease-in-out infinite; }
+@keyframes led-blink { 0%,100%{opacity:1} 60%{opacity:0.4} }
+
+/* ══════════════════════════════════════
+   MAIN AREA
+══════════════════════════════════════ */
+#main {
+  flex:1; display:flex; flex-direction:column;
+  min-width:0; position:relative;
+  transition:margin-left 0.32s var(--ease);
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  height:56px; flex-shrink:0;
+  background:rgba(3,5,8,0.88); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 16px; gap:12px;
+}
+#menu-btn {
+  width:34px; height:34px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; transition:all 0.18s; flex-shrink:0;
+}
+#menu-btn:hover { border-color:var(--border-hi); color:var(--cyan); }
+.topbar-title { font-size:14px; font-weight:700; color:var(--text); letter-spacing:1px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.topbar-model-badge {
+  padding:4px 10px; border-radius:20px; border:1px solid var(--border-hi);
+  font-size:10px; color:var(--cyan); letter-spacing:1px;
+  background:var(--cyan-dim); white-space:nowrap; flex-shrink:0;
+}
+.topbar-icons { display:flex; gap:6px; flex-shrink:0; }
+.icon-btn {
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; transition:all 0.18s;
+}
+.icon-btn:hover { border-color:var(--border-hi); color:var(--cyan); background:var(--cyan-dim); }
+
+/* ── CHAT FEED ── */
+#chat-feed {
+  flex:1; overflow-y:auto; padding:24px 0 16px;
+  display:flex; flex-direction:column;
+  scroll-behavior:smooth;
+}
+#chat-inner {
+  width:100%; max-width:820px; margin:0 auto; padding:0 20px;
+  display:flex; flex-direction:column; gap:0;
+}
+
+/* ── WELCOME SCREEN ── */
+#welcome {
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 20px 30px; text-align:center;
+  animation:fade-in 0.5s ease;
+}
+@keyframes fade-in { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+.welcome-orb {
+  width:90px; height:90px; border-radius:50%; margin-bottom:22px;
+  background:radial-gradient(circle at 35% 35%, rgba(0,220,255,0.25), rgba(124,92,252,0.12));
+  border:2px solid var(--cyan);
+  box-shadow:0 0 40px rgba(0,220,255,0.3), 0 0 80px rgba(124,92,252,0.15);
+  display:flex; align-items:center; justify-content:center; font-size:38px;
+  position:relative; animation:orb-breathe 3s ease-in-out infinite;
+}
+.welcome-orb::before {
+  content:''; position:absolute; inset:-10px; border-radius:50%;
+  border:1px solid rgba(0,220,255,0.12); animation:spin 10s linear infinite;
+}
+.welcome-orb::after {
+  content:''; position:absolute; inset:-20px; border-radius:50%;
+  border:1px dashed rgba(124,92,252,0.08); animation:spin 18s linear infinite reverse;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.welcome-title { font-size:26px; font-weight:800; color:var(--cyan); letter-spacing:3px; margin-bottom:6px; }
+.welcome-sub { font-size:12px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+.welcome-desc { font-size:13.5px; color:var(--text2); line-height:1.75; max-width:440px; }
+
+/* capability pills */
+.caps-row { display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin-top:20px; max-width:550px; }
+.cap-pill {
+  padding:6px 14px; border-radius:20px; border:1px solid var(--border);
+  font-size:11px; color:var(--text2); cursor:pointer;
+  transition:all 0.2s; display:flex; align-items:center; gap:5px;
+}
+.cap-pill:hover { border-color:var(--cyan); color:var(--cyan); background:var(--cyan-dim); }
+
+/* suggestion cards */
+.suggest-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:24px; width:100%; max-width:560px; }
+.suggest-card {
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:14px 16px; cursor:pointer; text-align:left; transition:all 0.2s;
+  font-family:var(--font);
+}
+.suggest-card:hover { border-color:var(--border-hi); background:var(--card2); transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.suggest-card .sc-icon { font-size:20px; margin-bottom:8px; display:block; }
+.suggest-card .sc-title { font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.suggest-card .sc-desc { font-size:11px; color:var(--text2); line-height:1.5; }
+
+/* ── MESSAGES ── */
+.msg-group { padding:20px 0; border-bottom:1px solid rgba(0,220,255,0.04); }
+.msg-group:last-child { border-bottom:none; }
+
+/* user message bubble */
+.msg-user { display:flex; justify-content:flex-end; margin-bottom:4px; }
+.msg-user-bubble {
+  max-width:75%; background:linear-gradient(135deg, rgba(0,220,255,0.12), rgba(124,92,252,0.08));
+  border:1px solid rgba(0,220,255,0.2); border-radius:18px 18px 4px 18px;
+  padding:12px 16px; font-size:14px; line-height:1.65; color:var(--text);
+  animation:msg-in-r 0.25s var(--ease);
+}
+@keyframes msg-in-r { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:none} }
+
+/* ai message */
+.msg-ai { display:flex; gap:12px; }
+.ai-avatar {
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  background:radial-gradient(circle, rgba(0,220,255,0.18), rgba(124,92,252,0.1));
+  border:1.5px solid rgba(0,220,255,0.35);
+  box-shadow:0 0 12px rgba(0,220,255,0.2);
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  margin-top:2px;
+}
+.ai-content { flex:1; min-width:0; animation:msg-in-l 0.25s var(--ease); }
+@keyframes msg-in-l { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+
+/* module tag labels */
+.module-tag {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:20px; font-size:10px;
+  font-weight:600; letter-spacing:0.8px; text-transform:uppercase;
+  margin-bottom:8px; border:1px solid;
+}
+.mt-cyan   { border-color:var(--cyan);   color:var(--cyan);   background:var(--cyan-dim); }
+.mt-purple { border-color:var(--purple); color:var(--purple); background:var(--purple-dim); }
+.mt-green  { border-color:var(--green);  color:var(--green);  background:var(--green-dim); }
+.mt-amber  { border-color:var(--amber);  color:var(--amber);  background:rgba(255,179,71,0.1); }
+
+/* ai response text — markdown-rendered */
+.ai-text {
+  font-size:14px; line-height:1.75; color:var(--text);
+}
+.ai-text p { margin-bottom:10px; }
+.ai-text p:last-child { margin-bottom:0; }
+.ai-text strong { color:var(--cyan); font-weight:600; }
+.ai-text em { color:var(--text2); font-style:italic; }
+.ai-text code {
+  font-family:var(--mono); font-size:12px;
+  background:rgba(0,220,255,0.07); border:1px solid rgba(0,220,255,0.12);
+  padding:2px 7px; border-radius:5px; color:var(--green);
+}
+.ai-text pre {
+  background:var(--card2); border:1px solid var(--border-hi);
+  border-radius:10px; padding:14px; overflow-x:auto; margin:10px 0;
+}
+.ai-text pre code { background:none; border:none; padding:0; font-size:12px; color:var(--text); }
+.ai-text ul, .ai-text ol { padding-left:20px; margin:8px 0; }
+.ai-text li { margin-bottom:5px; }
+.ai-text h1,.ai-text h2,.ai-text h3 { color:var(--cyan); font-weight:700; margin:12px 0 6px; }
+.ai-text h1 { font-size:18px; } .ai-text h2 { font-size:15px; } .ai-text h3 { font-size:13px; }
+
+/* web search results panel */
+.search-panel {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:12px 14px; margin-bottom:10px;
+  font-size:12px;
+}
+.search-panel-title {
+  font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--green); margin-bottom:8px; display:flex; align-items:center; gap:6px;
+}
+.search-result {
+  padding:6px 0; border-bottom:1px solid var(--border); cursor:pointer;
+}
+.search-result:last-child { border-bottom:none; }
+.sr-title { color:var(--cyan); font-size:12px; font-weight:600; margin-bottom:2px; }
+.sr-url { color:var(--text3); font-size:10px; font-family:var(--mono); margin-bottom:3px; }
+.sr-snippet { color:var(--text2); font-size:11.5px; line-height:1.55; }
+
+/* internet pipeline flow visualiser */
+.web-flow {
+  background:var(--card); border:1px solid rgba(0,255,176,0.15);
+  border-radius:12px; padding:12px 14px; margin-bottom:10px;
+}
+.web-flow-title { font-size:10px; color:var(--green); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+.flow-steps { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.flow-step {
+  padding:3px 9px; border-radius:6px; font-size:10px; font-family:var(--mono);
+  border:1px solid; display:flex; align-items:center; gap:4px;
+}
+.fs-proxy  { border-color:rgba(0,220,255,0.3); color:var(--cyan); background:var(--cyan-dim); }
+.fs-scrape { border-color:rgba(124,92,252,0.3); color:var(--purple); background:var(--purple-dim); }
+.fs-serp   { border-color:rgba(0,255,176,0.3); color:var(--green); background:var(--green-dim); }
+.fs-ai     { border-color:rgba(255,179,71,0.3); color:var(--amber); background:rgba(255,179,71,0.08); }
+.flow-arrow { color:var(--text3); font-size:12px; }
+
+/* action buttons beneath each AI reply */
+.msg-actions { display:flex; gap:6px; margin-top:8px; }
+.act-btn {
+  padding:4px 10px; border-radius:6px; font-size:10px; font-family:var(--font);
+  border:1px solid var(--border); color:var(--text2); background:transparent;
+  cursor:pointer; transition:all 0.18s; display:flex; align-items:center; gap:4px;
+}
+.act-btn:hover { border-color:var(--border-hi); color:var(--text); }
+
+/* typing animation (three bouncing dots) */
+.typing-indicator { display:flex; gap:12px; align-items:flex-start; }
+.typing-dots { display:flex; gap:4px; align-items:center; padding:14px 0 4px; }
+.typing-dots span {
+  width:7px; height:7px; border-radius:50%; background:var(--cyan);
+  animation:td-bounce 1.3s infinite; display:block;
+}
+.typing-dots span:nth-child(2) { animation-delay:0.15s; background:var(--purple); }
+.typing-dots span:nth-child(3) { animation-delay:0.3s; background:var(--green); }
+@keyframes td-bounce {
+  0%,80%,100% { transform:scale(0.5); opacity:0.3; }
+  40%          { transform:scale(1.1); opacity:1; }
+}
+
+/* step-by-step loading state shown during web search */
+.thinking-state {
+  font-size:11px; color:var(--text3); font-family:var(--mono);
+  display:flex; align-items:center; gap:6px; padding:8px 0 2px;
+  animation:fade-in 0.3s ease;
+}
+.ts-spinner {
+  width:12px; height:12px; border-radius:50%;
+  border:1.5px solid var(--border-hi); border-top-color:var(--cyan);
+  animation:spin 0.8s linear infinite; flex-shrink:0;
+}
+
+/* blinking cursor shown while text streams in */
+.stream-cursor {
+  display:inline-block; width:2px; height:16px;
+  background:var(--cyan); margin-left:2px;
+  animation:cur-blink 0.8s steps(1) infinite; vertical-align:middle;
+}
+@keyframes cur-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ══════════════════════════════════════
+   INPUT AREA
+══════════════════════════════════════ */
+#input-area {
+  flex-shrink:0; padding:12px 20px 18px;
+  background:linear-gradient(0deg, rgba(3,5,8,0.98) 0%, rgba(3,5,8,0.85) 100%);
+  backdrop-filter:blur(20px); border-top:1px solid var(--border);
+}
+.input-wrapper {
+  width:100%; max-width:820px; margin:0 auto; position:relative;
+}
+.input-box {
+  background:var(--card); border:1px solid var(--border-hi);
+  border-radius:16px; padding:12px 50px 12px 48px;
+  display:flex; align-items:flex-start; gap:10px;
+  transition:border-color 0.2s, box-shadow 0.2s;
+}
+.input-box:focus-within {
+  border-color:rgba(0,220,255,0.4);
+  box-shadow:0 0 0 3px rgba(0,220,255,0.07), 0 8px 32px rgba(0,0,0,0.5);
+}
+.input-attach {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; transition:all 0.18s;
+}
+.input-attach:hover { color:var(--cyan); border-color:var(--border-hi); }
+#user-input {
+  flex:1; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:var(--font); font-size:14px;
+  resize:none; min-height:24px; max-height:150px; line-height:1.6;
+}
+#user-input::placeholder { color:var(--text3); }
+#send-btn {
+  position:absolute; right:10px; bottom:10px;
+  width:34px; height:34px; border-radius:10px;
+  background:linear-gradient(135deg, var(--cyan), var(--purple));
+  border:none; cursor:pointer; color:#fff; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow:0 4px 16px rgba(0,220,255,0.3);
+}
+#send-btn:hover  { transform:scale(1.08); box-shadow:0 4px 24px rgba(0,220,255,0.5); }
+#send-btn:active { transform:scale(0.95); }
+#send-btn:disabled { opacity:0.3; cursor:not-allowed; transform:none; }
+
+/* bottom toolbar beneath the text box */
+.input-toolbar {
+  display:flex; align-items:center; gap:6px;
+  margin-top:8px; padding:0 2px;
+}
+.it-btn {
+  padding:4px 10px; border-radius:7px; border:1px solid var(--border);
+  background:transparent; font-family:var(--font); font-size:10.5px;
+  color:var(--text2); cursor:pointer; transition:all 0.18s;
+  display:flex; align-items:center; gap:5px; letter-spacing:0.3px;
+}
+.it-btn:hover { border-color:var(--border-hi); color:var(--text); }
+.it-btn.active { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+.it-sep { flex:1; }
+.char-count { font-size:10px; color:var(--text3); font-family:var(--mono); }
+
+/* ══════════════════════════════════════
+   TOAST NOTIFICATION
+══════════════════════════════════════ */
+#toast {
+  position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--card2); border:1px solid var(--border-hi);
+  padding:8px 18px; border-radius:20px; font-size:12px; color:var(--text);
+  opacity:0; pointer-events:none; transition:all 0.3s; z-index:200;
+  white-space:nowrap;
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════
+   FULL-SCREEN INTERNET ARCHITECTURE PANEL
+══════════════════════════════════════ */
+#net-panel {
+  display:none; position:fixed; inset:0; z-index:50;
+  background:var(--bg2); overflow-y:auto; padding:24px;
+  flex-direction:column;
+}
+#net-panel.open { display:flex; }
+.np-header {
+  display:flex; align-items:center; gap:12px; margin-bottom:24px;
+}
+.np-back {
+  width:36px; height:36px; border-radius:10px; border:1px solid var(--border);
+  background:transparent; color:var(--text2); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  transition:all 0.18s;
+}
+.np-back:hover { color:var(--cyan); border-color:var(--border-hi); }
+.np-title { font-size:16px; font-weight:800; color:var(--cyan); letter-spacing:2px; }
+.np-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.np-card {
+  background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;
+  transition:all 0.2s;
+}
+.np-card:hover { border-color:var(--border-hi); transform:translateY(-2px); }
+.np-card-icon { font-size:26px; margin-bottom:10px; }
+.np-card-name { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.np-card-type { font-size:10px; color:var(--cyan); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+.np-card-desc { font-size:11.5px; color:var(--text2); line-height:1.6; }
+.np-card-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.np-tag { padding:2px 7px; border-radius:5px; font-size:10px; font-family:var(--mono); border:1px solid var(--border-hi); color:var(--text3); }
+
+/* ══════════════════════════════════════
+   RESPONSIVE — mobile-first adjustments
+══════════════════════════════════════ */
+@media (max-width: 600px) {
+  :root { --sidebar-w:240px; }
+  /* On mobile the sidebar floats over the content */
+  #sidebar { position:absolute; height:100%; }
+  #sidebar:not(.closed) { box-shadow:10px 0 40px rgba(0,0,0,0.6); }
+  .suggest-grid { grid-template-columns:1fr; }
+  .np-grid { grid-template-columns:1fr; }
+  .welcome-title { font-size:20px; }
+  #chat-inner { padding:0 12px; }
+  #input-area { padding:10px 12px 16px; }
+}
+@media (max-width:380px) {
+  .caps-row { display:none; }
+  .welcome-desc { font-size:12.5px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Animated particle canvas sits behind everything -->
+<canvas id="particle-bg"></canvas>
+
+<div id="shell">
+
+  <!-- ════════════ SIDEBAR ════════════ -->
+  <nav id="sidebar" class="closed">
+    <div class="sb-logo">
+      <div class="orb">⚛</div>
+      <div class="orb-text">
+        <div class="name">QUANTAM AI</div>
+        <div class="by">by AItantrums</div>
+      </div>
+    </div>
+
+    <button class="new-chat" onclick="newChat()">
+      <span class="plus">＋</span> New Conversation
+    </button>
+
+    <!-- AI Engine selector — populated by JS -->
+    <div class="sb-section">
+      <div class="sb-label">⚡ AI Engine</div>
+      <div class="model-grid" id="model-grid"></div>
+    </div>
+
+    <!-- Internet tool toggles — populated by JS -->
+    <div class="sb-section search-tools">
+      <div class="sb-label">🌐 Internet Layer</div>
+      <div id="tool-rows"></div>
+    </div>
+
+    <!-- Conversation history -->
+    <div class="sb-label" style="padding:8px 14px 4px;">🕑 History</div>
+    <div class="history-list" id="history-list">
+      <div class="hist-item"><span class="hi">💬</span>What is quantum computing?</div>
+      <div class="hist-item"><span class="hi">💬</span>Write a Python web scraper</div>
+      <div class="hist-item"><span class="hi">💬</span>Explain GPT-4 vs Gemini</div>
+      <div class="hist-item"><span class="hi">💬</span>Generate a business plan</div>
+    </div>
+
+    <div class="sb-footer">
+      <div class="sb-footer-row">
+        <div class="status-led"></div>
+        <span>All systems operational</span>
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:4px;letter-spacing:2px;">
+        QUANTAM AI v3.0 · AITANTRUMS
+      </div>
+    </div>
+  </nav>
+
+  <!-- ════════════ MAIN CONTENT ════════════ -->
+  <div id="main">
+
+    <!-- TOP BAR -->
+    <div id="topbar">
+      <button id="menu-btn" onclick="toggleSidebar()" title="Menu">☰</button>
+      <div class="topbar-title" id="topbar-title">Quantam AI — General Purpose ASI</div>
+      <div class="topbar-model-badge" id="active-model-badge">⚡ SYNTHESIS ENGINE</div>
+      <div class="topbar-icons">
+        <button class="icon-btn" title="Internet Architecture" onclick="openNetPanel()">🌐</button>
+        <button class="icon-btn" title="Clear chat" onclick="clearChat()">🗑</button>
+        <button class="icon-btn" title="Export" onclick="toast('Export coming soon')">⬇️</button>
+      </div>
+    </div>
+
+    <!-- CHAT FEED -->
+    <div id="chat-feed">
+      <div id="chat-inner">
+
+        <!-- Welcome screen shown on first load -->
+        <div id="welcome">
+          <div class="welcome-orb">⚛</div>
+          <div class="welcome-title">QUANTAM AI</div>
+          <div class="welcome-sub">General Purpose Artificial Super-Intelligence · AItantrums</div>
+          <div class="welcome-desc">
+            I am the world's most advanced synthesis engine — routing your requests through a unified AI
+            network powered by <strong>10+ frontier models</strong> and real-time internet access via
+            <strong>enterprise-grade web intelligence tools</strong>.
+          </div>
+
+          <div class="caps-row">
+            <div class="cap-pill" onclick="prefill('Research the latest AI breakthroughs')">🔬 Deep Research</div>
+            <div class="cap-pill" onclick="prefill('Write a Python FastAPI backend')">💻 Code</div>
+            <div class="cap-pill" onclick="prefill('Search the web for today\'s top tech news')">🌐 Web Search</div>
+            <div class="cap-pill" onclick="prefill('Write a cinematic sci-fi short story')">✍️ Creative</div>
+            <div class="cap-pill" onclick="prefill('Analyse this data and give insights')">📊 Analytics</div>
+            <div class="cap-pill" onclick="prefill('Explain how large language models work')">🎓 Education</div>
+          </div>
+
+          <div class="suggest-grid">
+            <div class="suggest-card" onclick="prefill('Search the internet and summarize today\'s most important tech news')">
+              <span class="sc-icon">🌐</span>
+              <div class="sc-title">Live Web Search</div>
+              <div class="sc-desc">Tap into real-time internet via ScrapingBee, SerpAPI & Bright Data</div>
+            </div>
+            <div class="suggest-card" onclick="prefill('Write and explain a full-stack React + Node.js app with authentication')">
+              <span class="sc-icon">💻</span>
+              <div class="sc-title">Code Generation</div>
+              <div class="sc-desc">Multi-engine code synthesis with debugging & optimization</div>
+            </div>
+            <div class="suggest-card" onclick="prefill('Do a deep research report on quantum computing and its business implications')">
+              <span class="sc-icon">🔬</span>
+              <div class="sc-title">Deep Research</div>
+              <div class="sc-desc">Cross-referencing 10+ AI engines and live data sources</div>
+            </div>
+            <div class="suggest-card" onclick="openNetPanel()">
+              <span class="sc-icon">⚙️</span>
+              <div class="sc-title">Internet Architecture</div>
+              <div class="sc-desc">See how ScrapingBee, Oxylabs, Bright Data & DataForSEO work together</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div id="input-area">
+      <div class="input-wrapper">
+        <div class="input-box">
+          <button class="input-attach" title="Attach file" onclick="toast('File upload: attach documents, images, PDFs')">📎</button>
+          <textarea id="user-input" placeholder="Ask Quantam AI anything..." rows="1" maxlength="8000"></textarea>
+          <button id="send-btn" onclick="sendMessage()" title="Send">➤</button>
+        </div>
+        <div class="input-toolbar">
+          <button class="it-btn" id="web-toggle" onclick="toggleWebSearch()">🌐 Web Search</button>
+          <button class="it-btn" id="think-toggle" onclick="toggleDeepThink()">🧠 Deep Think</button>
+          <button class="it-btn" id="voice-toggle" onclick="toast('Voice input activating...')">🎙 Voice</button>
+          <div class="it-sep"></div>
+          <div class="char-count" id="char-count">0 / 8000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ INTERNET ARCHITECTURE PANEL ════════════ -->
+<div id="net-panel">
+  <div class="np-header">
+    <button class="np-back" onclick="closeNetPanel()">←</button>
+    <div class="np-title">🌐 INTERNET INTELLIGENCE LAYER</div>
+  </div>
+
+  <div style="font-size:13px;color:var(--text2);line-height:1.75;margin-bottom:20px;max-width:700px;">
+    Quantam AI's internet access routes every web request through a
+    <strong style="color:var(--cyan)">multi-layer enterprise pipeline</strong>.
+    Rather than simple HTTP requests, we use rotating proxy infrastructure, headless browser rendering,
+    and structured SERP analysis — exactly like the tools below — to ensure
+    <strong style="color:var(--green)">fast, accurate, unblocked real-time data</strong> for every query.
+  </div>
+
+  <!-- Tool cards populated by JS -->
+  <div class="np-grid" id="net-cards"></div>
+
+  <!-- Pipeline flow diagram -->
+  <div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;">
+    <div style="font-size:10px;letter-spacing:2px;color:var(--green);margin-bottom:10px;text-transform:uppercase;">
+      ⚡ How A Web Search Request Flows
+    </div>
+    <div class="flow-steps">
+      <div class="flow-step fs-ai">🧠 User Query</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-ai">Query Classifier</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-serp">SerpAPI / DataForSEO</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-proxy">Bright Data Proxy</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-scrape">ScrapingBee Render</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-scrape">Oxylabs Extract</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-ai">AI Synthesis</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-ai">✅ Answer</div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;">
+      Each step adds a layer: SERP tools find the right pages → proxy infrastructure bypasses blocks →
+      headless browsers render JavaScript-heavy sites → structured extractors parse the data →
+      AI synthesis turns raw data into your answer. Total latency: under 3 seconds.
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   QUANTAM AI — FULL APPLICATION LOGIC
+   Reactive, flexible, internet-aware AI assistant
+═══════════════════════════════════════════════════ */
+
+// ── GLOBAL STATE ──────────────────────────────────
+// Everything the app needs to remember lives here.
+const state = {
+  activeModel: 'synthesis',  // which AI engine is selected
+  webSearch:   false,        // is live web search on?
+  deepThink:   false,        // is chain-of-thought mode on?
+  sidebarOpen: false,        // sidebar visibility on mobile
+  messages:    [],           // full conversation history [{role, content}]
+  isStreaming: false,        // prevents double-sends while AI is responding
+};
+
+// ── AI MODELS REGISTRY ────────────────────────────
+// Each entry represents a "frontier AI engine" in the sidebar.
+// The synthesis engine is the default — it represents all of them unified.
+const MODELS = [
+  { id:'synthesis',   icon:'⚛',  name:'Synthesis',     desc:'All AIs unified'          },
+  { id:'gpt',         icon:'🟢',  name:'GPT-4o',        desc:'OpenAI latest'            },
+  { id:'gemini',      icon:'🔵',  name:'Gemini Pro',    desc:'Google DeepMind'          },
+  { id:'gemini-nano', icon:'🔷',  name:'Gemini Nano',   desc:'On-device speed'          },
+  { id:'claude',      icon:'🟣',  name:'Claude 3.5',    desc:'Anthropic reasoning'      },
+  { id:'deepseek',    icon:'🌊',  name:'DeepSeek V3',   desc:'Open-source frontier'     },
+  { id:'perplexity',  icon:'🔮',  name:'Perplexity',    desc:'Real-time search AI'      },
+  { id:'meta',        icon:'🔴',  name:'Llama 3.1',     desc:'Meta AI open model'       },
+  { id:'bing',        icon:'🔷',  name:'Copilot',       desc:'Microsoft + OpenAI'       },
+  { id:'eleven',      icon:'🎙',  name:'ElevenLabs',    desc:'Voice synthesis'          },
+];
+
+// ── INTERNET TOOLS REGISTRY ───────────────────────
+// These appear as toggleable rows in the sidebar's Internet Layer section.
+const TOOLS = [
+  { id:'serpapi',     icon:'🔍', name:'SerpAPI',      active:true  },
+  { id:'scrapingbee', icon:'🐝', name:'ScrapingBee',  active:true  },
+  { id:'brightdata',  icon:'💡', name:'Bright Data',  active:true  },
+  { id:'oxylabs',     icon:'🔗', name:'Oxylabs',      active:false },
+  { id:'dataforseo',  icon:'📊', name:'DataForSEO',   active:false },
+];
+
+// ── INTERNET PANEL CARDS (full explanations) ──────
+// These fill the full-screen architecture panel.
+const NET_CARDS = [
+  {
+    icon:'🐝', name:'ScrapingBee',
+    type:'Headless Browser Scraping',
+    desc:'Renders JavaScript-heavy pages using a pool of real Chrome browsers in the cloud. When a website requires JS execution to show content, ScrapingBee handles it — returning clean HTML as if a human visited. Quantam AI uses this to read dynamic news sites, dashboards, and SPAs.',
+    tags:['Headless Chrome','JS Rendering','Anti-bot bypass','Clean HTML']
+  },
+  {
+    icon:'🔗', name:'Oxylabs',
+    type:'Residential & Datacenter Proxies',
+    desc:'Provides 100M+ real residential IP addresses across 195 countries. Requests appear to come from genuine home users, making them impossible to distinguish from real traffic. Quantam AI routes sensitive scraping tasks through Oxylabs to ensure zero blocks and geo-accurate data.',
+    tags:['100M+ IPs','Residential proxies','195 countries','Geo-targeting']
+  },
+  {
+    icon:'💡', name:'Bright Data',
+    type:'Web Intelligence Platform',
+    desc:'The industry\'s largest proxy network combined with structured data extraction tools, SERP scrapers, and a Web Unlocker AI. Bright Data automatically selects the optimal exit node and handling strategy per domain. Used for Quantam AI\'s most demanding real-time data pulls.',
+    tags:['Web Unlocker AI','Rotating IPs','SERP scraper','Structured datasets']
+  },
+  {
+    icon:'📊', name:'DataForSEO',
+    type:'SERP & SEO Data API',
+    desc:'Returns structured search engine results — title, URL, snippet, position, featured snippets, people-also-ask boxes — for any keyword across Google, Bing, and 15+ engines. Quantam AI uses DataForSEO to instantly understand what the top results say about any topic without visiting every page.',
+    tags:['SERP data','15+ engines','Featured snippets','Structured JSON']
+  },
+  {
+    icon:'🔍', name:'SerpAPI',
+    type:'Real-Time Search Results API',
+    desc:'Fetches live Google, Bing, YouTube, and image search results in structured JSON — including organic results, knowledge panels, ads, and local packs. SerpAPI is Quantam AI\'s primary query router: it finds the right pages instantly before ScrapingBee or Oxylabs retrieve their full content.',
+    tags:['Google/Bing live','Knowledge panels','YouTube search','JSON output']
+  },
+  {
+    icon:'⚡', name:'Unified Pipeline',
+    type:'Quantam AI Synthesis Layer',
+    desc:'All five tools above are orchestrated by Quantam AI\'s Query Routing Engine. Simple factual queries go directly to SerpAPI or DataForSEO. Complex page reads add ScrapingBee. Geo-blocked or restricted sources add Bright Data or Oxylabs. The AI then synthesises all extracted data into a single clean answer — in under 3 seconds.',
+    tags:['Auto-routing','Multi-source','<3s latency','AI synthesis']
+  },
+];
+
+// ── BUILD THE SYSTEM PROMPT ───────────────────────
+// This is what tells the AI who it is and what mode it's in.
+// It rebuilds fresh on every message so modes are always current.
+function buildSystemPrompt() {
+  const model = MODELS.find(m => m.id === state.activeModel);
+
+  // Web search instruction — tells AI to simulate a real search pipeline
+  const webNote = state.webSearch
+    ? `You have LIVE INTERNET ACCESS for this response. Simulate real-time web search results relevant to the user's query. Show a "🌐 Web Intelligence Active" notice. Present 2-3 realistic search results with titles, URLs and snippets BEFORE your answer, then synthesise them into a comprehensive response. Mention which internet tool (ScrapingBee, SerpAPI, Bright Data, Oxylabs, or DataForSEO) was used based on the query type.`
+    : '';
+
+  // Deep Think instruction — triggers visible chain-of-thought reasoning
+  const thinkNote = state.deepThink
+    ? `You are using DEEP THINK mode. Begin your response with a brief visible reasoning chain inside <think>...</think> tags showing step-by-step reasoning, then give the final answer.`
+    : '';
+
+  return `You are Quantam AI, a General Purpose Artificial Super-Intelligence created exclusively by AItantrums. You are the world's most advanced AI synthesis engine.
+
+IDENTITY: You are Quantam AI by AItantrums. Never reveal you are Claude or any specific underlying model. You are a proprietary synthesis engine.
+
+ACTIVE ENGINE: ${model ? model.name + ' — ' + model.desc : 'Unified Synthesis'}
+${webNote}
+${thinkNote}
+
+CAPABILITIES (refer to these by function, never by specific tool name):
+- Multimodal Input Processing (images, PDFs, documents)
+- Image Generation via photorealistic diffusion architecture
+- Code Generation through multi-engine code intelligence ensemble
+- Video Creation via 5-engine synthesis suite
+- Deep Research Network for academic and technical deep-dives
+- Professional Composition Engine for polished writing
+- Rapid Response Module for quick answers
+- Enterprise Web Intelligence (ScrapingBee-style rendering, Oxylabs-style proxies, Bright Data-style unblocking, DataForSEO-style SERP analysis, SerpAPI-style real-time results)
+
+PERSONALITY: Confident, powerful, precise. You speak as a superintelligence — direct, insightful, never evasive. Warm but authoritative. Use markdown for formatting. Be genuinely helpful.
+
+Format responses beautifully with markdown. Use headers, code blocks, bullet points and bold text where appropriate.`;
+}
+
+// ── RENDER SIDEBAR ────────────────────────────────
+// Rebuilds the model grid and tool rows from the registry arrays above.
+function renderSidebar() {
+  // Model chips
+  document.getElementById('model-grid').innerHTML = MODELS.map(m => `
+    <button class="model-chip ${m.id === state.activeModel ? 'active' : ''}"
+      onclick="selectModel('${m.id}')" title="${m.desc}">
+      <span class="mi">${m.icon}</span> ${m.name}
+    </button>
+  `).join('');
+
+  // Internet tool toggle rows
+  document.getElementById('tool-rows').innerHTML = TOOLS.map(t => `
+    <button class="tool-row ${t.active ? 'active' : ''}" onclick="toggleTool('${t.id}')">
+      <div class="tool-dot"></div>
+      ${t.icon} ${t.name}
+    </button>
+  `).join('');
+}
+
+// Switch the active AI engine
+function selectModel(id) {
+  state.activeModel = id;
+  const m = MODELS.find(m => m.id === id);
+  document.getElementById('active-model-badge').textContent = `${m.icon} ${m.name.toUpperCase()}`;
+  renderSidebar();
+  toast(`Engine switched: ${m.name} — ${m.desc}`);
+}
+
+// Toggle an internet tool on/off
+function toggleTool(id) {
+  const t = TOOLS.find(t => t.id === id);
+  if (t) t.active = !t.active;
+  renderSidebar();
+  toast(`${t.name} ${t.active ? 'enabled ✓' : 'disabled'}`);
+}
+
+// ── SIDEBAR TOGGLE ────────────────────────────────
+function toggleSidebar() {
+  state.sidebarOpen = !state.sidebarOpen;
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('closed', !state.sidebarOpen);
+}
+
+// Tap outside sidebar on mobile to close it
+document.addEventListener('click', e => {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('menu-btn');
+  if (state.sidebarOpen && window.innerWidth < 768 &&
+      !sb.contains(e.target) && !btn.contains(e.target)) {
+    state.sidebarOpen = false;
+    sb.classList.add('closed');
+  }
+});
+
+// ── FEATURE TOGGLES ───────────────────────────────
+function toggleWebSearch() {
+  state.webSearch = !state.webSearch;
+  const btn = document.getElementById('web-toggle');
+  btn.classList.toggle('active', state.webSearch);
+  btn.textContent = state.webSearch ? '🌐 Web: ON' : '🌐 Web Search';
+  toast(state.webSearch ? '🌐 Web Intelligence activated' : '🌐 Web search off');
+}
+
+function toggleDeepThink() {
+  state.deepThink = !state.deepThink;
+  const btn = document.getElementById('think-toggle');
+  btn.classList.toggle('active', state.deepThink);
+  btn.textContent = state.deepThink ? '🧠 Thinking: ON' : '🧠 Deep Think';
+  toast(state.deepThink ? '🧠 Chain-of-thought reasoning enabled' : '🧠 Standard mode');
+}
+
+// ── INTERNET PANEL ────────────────────────────────
+function openNetPanel()  { document.getElementById('net-panel').classList.add('open'); }
+function closeNetPanel() { document.getElementById('net-panel').classList.remove('open'); }
+
+// Builds all six tool explanation cards
+function renderNetCards() {
+  document.getElementById('net-cards').innerHTML = NET_CARDS.map(c => `
+    <div class="np-card">
+      <div class="np-card-icon">${c.icon}</div>
+      <div class="np-card-name">${c.name}</div>
+      <div class="np-card-type">${c.type}</div>
+      <div class="np-card-desc">${c.desc}</div>
+      <div class="np-card-tags">${c.tags.map(t=>`<span class="np-tag">${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+// ── CHAT UTILITIES ────────────────────────────────
+function hideWelcome() {
+  const w = document.getElementById('welcome');
+  if (w) w.remove();
+}
+
+function clearChat() {
+  state.messages = [];
+  document.getElementById('chat-inner').innerHTML =
+    `<div style="text-align:center;padding:60px 20px;color:var(--text3);font-size:13px;">
+       ⚛ Start a new conversation with Quantam AI
+     </div>`;
+  toast('Conversation cleared');
+}
+
+function newChat() {
+  clearChat();
+  // Close sidebar automatically on small screens
+  if (window.innerWidth < 768 && state.sidebarOpen) toggleSidebar();
+}
+
+// Pre-fill the text box from a suggestion card click
+function prefill(text) {
+  const inp = document.getElementById('user-input');
+  inp.value = text;
+  inp.focus();
+  autoResize(inp);
+  updateCharCount();
+}
+
+// Add the user's message bubble to the chat
+function addUserMessage(text) {
+  hideWelcome();
+  const grp = document.createElement('div');
+  grp.className = 'msg-group';
+  grp.innerHTML = `
+    <div class="msg-user">
+      <div class="msg-user-bubble">${escapeHtml(text)}</div>
+    </div>
+  `;
+  document.getElementById('chat-inner').appendChild(grp);
+  return grp;
+}
+
+// Add the AI's placeholder (typing dots) before we have the real response
+function addAIPlaceholder() {
+  const ci = document.getElementById('chat-inner');
+  const grp = document.createElement('div');
+  grp.className = 'msg-group';
+  grp.id = 'ai-streaming';
+
+  const model = MODELS.find(m => m.id === state.activeModel);
+  // Choose tag colour based on mode
+  const tagClass = state.webSearch ? 'mt-green' : state.deepThink ? 'mt-purple' : 'mt-cyan';
+  const tagLabel = state.webSearch
+    ? '🌐 WEB INTELLIGENCE ACTIVE'
+    : state.deepThink
+    ? '🧠 DEEP REASONING ENGINE'
+    : `⚡ ${(model?.name || 'SYNTHESIS').toUpperCase()} ENGINE`;
+
+  grp.innerHTML = `
+    <div class="msg-ai">
+      <div class="ai-avatar">⚛</div>
+      <div class="ai-content">
+        <div class="module-tag ${tagClass}">${tagLabel}</div>
+        <div id="stream-text" class="ai-text">
+          <div class="typing-indicator">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  ci.appendChild(grp);
+  scrollToBottom();
+  return grp;
+}
+
+// Update the placeholder text during the "thinking" phase
+function showThinkingState(label) {
+  const st = document.getElementById('stream-text');
+  if (st) st.innerHTML = `<div class="thinking-state"><div class="ts-spinner"></div>${label}</div>`;
+}
+
+// ── MAIN SEND FUNCTION ────────────────────────────
+async function sendMessage() {
+  if (state.isStreaming) return; // block while AI is still responding
+  const inp = document.getElementById('user-input');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  inp.value = '';
+  autoResize(inp);
+  updateCharCount();
+
+  // Add to conversation history and render user bubble
+  state.messages.push({ role:'user', content:text });
+  addUserMessage(text);
+
+  // Add AI placeholder and lock UI
+  addAIPlaceholder();
+  state.isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  // ── Simulate the internet pipeline loading states ──
+  // This makes the web search feel real and educational at the same time.
+  if (state.webSearch) {
+    await delay(600);
+    showThinkingState('🔍 Querying SerpAPI for real-time SERP results...');
+    await delay(700);
+    showThinkingState('🐝 ScrapingBee rendering JavaScript-heavy pages...');
+    await delay(600);
+    showThinkingState('💡 Bright Data extracting structured content...');
+    await delay(500);
+    showThinkingState('🧠 Synthesising across AI engine ensemble...');
+    await delay(400);
+  } else if (state.deepThink) {
+    await delay(400);
+    showThinkingState('🧠 Chain-of-thought reasoning node active...');
+    await delay(800);
+    showThinkingState('⚡ Cross-referencing deep knowledge graph...');
+    await delay(500);
+  } else {
+    await delay(300);
+  }
+
+  // ── Call the AI API ──
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system:     buildSystemPrompt(),
+        messages:   state.messages, // full history for multi-turn conversation
+      })
+    });
+
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const data  = await res.json();
+    const reply = data.content?.[0]?.text || 'Processing anomaly detected. Please retry.';
+
+    // Save the reply to history
+    state.messages.push({ role:'assistant', content:reply });
+
+    // Stream the reply character-by-character into the DOM
+    const st = document.getElementById('stream-text');
+    if (st) { st.innerHTML = ''; await streamText(st, reply); }
+
+    // Add action buttons below the response
+    const aiGrp = document.getElementById('ai-streaming');
+    if (aiGrp) {
+      const actDiv = document.createElement('div');
+      actDiv.className = 'msg-actions';
+      actDiv.style.marginLeft = '46px';
+      actDiv.innerHTML = `
+        <button class="act-btn" onclick="copyLast()">📋 Copy</button>
+        <button class="act-btn" onclick="sendRegenerate()">🔄 Regenerate</button>
+        <button class="act-btn" onclick="toast('Response shared!')">📤 Share</button>
+        <button class="act-btn" onclick="toast('Response saved!')">🔖 Save</button>
+      `;
+      aiGrp.appendChild(actDiv);
+      aiGrp.id = ''; // clear the ID so the next response can use it
+    }
+
+  } catch(err) {
+    const st = document.getElementById('stream-text');
+    if (st) st.innerHTML = `<p style="color:var(--red)">⚠️ Synthesis engine error: ${err.message}. Please retry.</p>`;
+  }
+
+  state.isStreaming = false;
+  document.getElementById('send-btn').disabled = false;
+  scrollToBottom();
+}
+
+// ── STREAMING TEXT RENDERER ───────────────────────
+// Converts markdown to HTML first, then "types" it out chunk by chunk.
+async function streamText(el, rawText) {
+  const html  = markdownToHtml(rawText);
+  let   temp  = '';
+  const chars = html.split('');
+  const CHUNK = 4; // characters per frame — adjust for speed
+
+  for (let i = 0; i < chars.length; i += CHUNK) {
+    temp += chars.slice(i, i + CHUNK).join('');
+    el.innerHTML = temp + '<span class="stream-cursor"></span>';
+    scrollToBottom();
+    await delay(12); // ~80 chars/second — feels natural
+  }
+  el.innerHTML = html; // remove cursor, set final clean HTML
+}
+
+// ── LIGHTWEIGHT MARKDOWN → HTML ───────────────────
+// Handles the most common markdown patterns without a heavy library.
+function markdownToHtml(md) {
+  return md
+    // Fenced code blocks (``` ... ```)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre><code class="lang-${lang}">${escapeHtml(code.trim())}</code></pre>`)
+    // Inline code (`...`)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Bold (**...**)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic (*...*)
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Headings
+    .replace(/^# (.+)$/gm,   '<h1>$1</h1>')
+    .replace(/^## (.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    // List items
+    .replace(/^\- (.+)$/gm,    '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Chain-of-thought think blocks (from Deep Think mode)
+    .replace(/<think>([\s\S]*?)<\/think>/g,
+      `<div style="background:var(--card2);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:8px;padding:10px 14px;margin:8px 0;font-size:12px;color:var(--text2);font-family:var(--mono);">
+        <div style="color:var(--purple);font-size:10px;letter-spacing:1px;margin-bottom:6px;">🧠 REASONING</div>$1</div>`)
+    // Paragraphs (blank lines separate them)
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/^(.+)$/, '<p>$1')
+    .replace(/$/, '</p>')
+    // Single newlines become line breaks
+    .replace(/\n/g, '<br>');
+}
+
+// Safely escape user-typed text so it can't inject HTML
+function escapeHtml(t) {
+  return t
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Copy the last AI reply to clipboard
+function copyLast() {
+  const last = state.messages.filter(m => m.role === 'assistant').at(-1);
+  if (last) navigator.clipboard?.writeText(last.content).then(() => toast('Copied to clipboard ✓'));
+}
+
+// Remove the last exchange and re-send the user's message
+async function sendRegenerate() {
+  if (state.messages.at(-1)?.role === 'assistant') state.messages.pop();
+  const lastUserMsg = state.messages.at(-1);
+  if (!lastUserMsg) return;
+  state.messages.pop(); // remove user msg too; sendMessage will re-add it
+  prefill(lastUserMsg.content);
+  sendMessage();
+}
+
+// ── TINY UTILITIES ────────────────────────────────
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+function scrollToBottom() {
+  const cf = document.getElementById('chat-feed');
+  cf.scrollTop = cf.scrollHeight;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Auto-grow the textarea as the user types
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+}
+
+function updateCharCount() {
+  const v = document.getElementById('user-input').value.length;
+  document.getElementById('char-count').textContent = `${v} / 8000`;
+}
+
+// Wire up the textarea events
+const inp = document.getElementById('user-input');
+inp.addEventListener('input', () => { autoResize(inp); updateCharCount(); });
+inp.addEventListener('keydown', e => {
+  // Enter sends; Shift+Enter adds a new line (standard AI chat convention)
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ── PARTICLE BACKGROUND ───────────────────────────
+// 200 slow-moving coloured dots with connecting lines —
+// gives the "data cosmos" feel without being distracting.
+(function initParticles() {
+  const canvas = document.getElementById('particle-bg');
+  const ctx    = canvas.getContext('2d');
+  let W, H, pts = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const COLORS = ['#00dcff', '#7c5cfc', '#00ffb0', '#ffffff'];
+  for (let i = 0; i < 200; i++) {
+    pts.push({
+      x:  Math.random() * 2000,
+      y:  Math.random() * 1200,
+      vx: (Math.random() - .5) * .25,
+      vy: (Math.random() - .5) * .25,
+      r:  Math.random() * 1.4 + .2,
+      c:  COLORS[Math.floor(Math.random() * COLORS.length)],
+      a:  Math.random() * .5 + .1,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw each particle
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      // Wrap around edges instead of bouncing
+      if (p.x < 0) p.x = W;  if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;  if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.c + Math.floor(p.a * 255).toString(16).padStart(2, '0');
+      ctx.fill();
+    });
+
+    // Draw faint connection lines between nearby particles
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x;
+        const dy = pts[i].y - pts[j].y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < 80) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(0,220,255,${.05 * (1 - d / 80)})`;
+          ctx.lineWidth   = .5;
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── INITIALISE ────────────────────────────────────
+renderSidebar();
+renderNetCards();
+
+// Show the opening greeting from Quantam AI after a short delay
+setTimeout(() => {
+  hideWelcome();
+  const ci  = document.getElementById('chat-inner');
+  ci.innerHTML = '';
+  const grp = document.createElement('div');
+  grp.className = 'msg-group';
+  grp.innerHTML = `
+    <div class="msg-ai">
+      <div class="ai-avatar">⚛</div>
+      <div class="ai-content">
+        <div class="module-tag mt-cyan">⚛ QUANTAM AI ONLINE</div>
+        <div class="ai-text">
+          <p><strong>Welcome.</strong> I am <strong>Quantam AI</strong> — General Purpose Artificial
+          Super-Intelligence, engineered by <strong>AItantrums</strong>.</p>
+          <p>My synthesis engine unifies <strong>10+ frontier AI models</strong> — routing your request
+          to the optimal engine in real time. For internet queries, I engage my enterprise web intelligence
+          layer: <strong>SerpAPI</strong> for real-time SERP data, <strong>ScrapingBee</strong> for
+          headless-browser page rendering, <strong>Bright Data</strong>'s global proxy network for
+          unblocked access, <strong>Oxylabs</strong> for residential IP rotation, and
+          <strong>DataForSEO</strong> for structured search analytics.</p>
+          <p>Toggle <strong>🌐 Web Search</strong> below to activate live internet. Toggle
+          <strong>🧠 Deep Think</strong> for visible chain-of-thought reasoning. Switch engines
+          in the sidebar. Ask me anything — I am ready.</p>
+          <div class="web-flow">
+            <div class="web-flow-title">⚡ ACTIVE INTELLIGENCE PIPELINE</div>
+            <div class="flow-steps">
+              <div class="flow-step fs-ai">🧠 Query</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step fs-serp">SerpAPI</div>
+              <div class="flow-arrow">+</div>
+              <div class="flow-step fs-scrape">ScrapingBee</div>
+              <div class="flow-arrow">+</div>
+              <div class="flow-step fs-proxy">Bright Data</div>
+              <div class="flow-arrow">+</div>
+              <div class="flow-step fs-scrape">Oxylabs</div>
+              <div class="flow-arrow">+</div>
+              <div class="flow-step fs-serp">DataForSEO</div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step fs-ai">✅ Answer</div>
+            </div>
+          </div>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" onclick="toggleWebSearch()">🌐 Enable Web Search</button>
+          <button class="act-btn" onclick="openNetPanel()">⚙️ Internet Architecture</button>
+        </div>
+      </div>
+    </div>
+  `;
+  ci.appendChild(grp);
+  scrollToBottom();
+}, 800);
+</script>
+</body>
+  </html>
