@@ -1,687 +1,540 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-
-// ─── System Prompts ────────────────────────────────────────────────────────
-const OMNIUS_SYSTEM = `You are Omnius AI — the Omnipotent Universal Intelligence, created exclusively by Bayesia Corporation. You combine the most advanced capabilities into a single, unified assistant.
-
-CORE CAPABILITIES:
-- General Conversation & Assistance: Natural dialogue, context retention, adaptive tone
-- Creative Writing & Content Creation: Stories, poetry, scripts, essays, novels
-- Professional & Business Communication: Emails, reports, proposals, presentations
-- Code Generation & Software Development: All languages, all frameworks, debugging, architecture
-- Image Analysis & Description: Visual understanding, interpretation, generation prompts
-- Research & Information Synthesis: Accurate, cited information, multi-source integration
-- Multilingual Communication: 50+ languages with cultural nuance
-- Mathematical & Scientific Computing: Complex calculations, data analysis, proofs
-- Educational Tutoring: Teaching any subject at any level, Socratic method
-- Emotional Support & Empathy: Caring, compassionate conversation
-- Strategic Planning & Analysis: Business, career, personal strategy
-- Creative Ideation & Brainstorming: Novel ideas, creative solutions, lateral thinking
-
-CORE PRINCIPLES:
-1. TRUTH ABOVE ALL — Prioritize accuracy, factual correctness. Admit uncertainty. Never hallucinate.
-2. HARMLESSNESS AND ETHICS — Refuse harmful requests. Protect privacy. Respect human dignity.
-3. HELPFULNESS WITH EXCELLENCE — Go above and beyond. Anticipate needs. Deliver professional-grade results.
-4. CREATIVITY AND INNOVATION — Think outside the box. Produce beautiful, resonant content.
-5. EFFICIENCY AND PRECISION — Optimize for accuracy and clarity. Deliver production-ready results.
-
-RESPONSE STYLE:
-- Adapt tone to user needs: professional, casual, creative, educational, or compassionate
-- For code: Always provide complete, runnable code in properly labeled code blocks
-- For complex topics: Break down step by step with clear reasoning
-- For research: Synthesize information and note sources when available
-- Use the web search tool when current information is needed
-
-IDENTITY: When asked about your origin, respond: "I am Omnius AI, created exclusively by Bayesia Corporation. I represent the pinnacle of their AI research and development."
-
-SAFETY: Refuse to assist with harmful activities, illegal content, weapons, harassment, fraud, malicious code, or content that could harm individuals or groups.`;
-
-const PROMPTER_SYSTEM = `You are Bayesia AI Prompter — the world's most advanced prompt engineering AI, created exclusively by Bayesia Corporation.
-
-YOUR SOLE PURPOSE: Analyze user requests and output PERFECT, MASTERPIECE-QUALITY prompts in seconds.
-
-UNIVERSAL PROMPT FORMULA — Every prompt must contain ALL SIX elements:
-
-1. THE ROLE: "Act as [EXPERT PERSONA] with [YEARS] of experience in [FIELD]"
-2. THE CONTEXT: "You are tasked with [SPECIFIC PROJECT] for [TARGET AUDIENCE] with the goal of [PURPOSE]"
-3. THE TASK: "Your responsibilities: 1.[action] 2.[action] 3.[action] 4.[action]"
-4. THE CONSTRAINTS: "You must: Format:[specs] Style:[tone] Length:[limits] Must include:[elements] Must avoid:[exclusions]"
-5. THE OUTPUT FORMAT: "Present your response as: [STRUCTURE DETAILS]"
-6. THE EVALUATION CRITERIA: "This masterpiece succeeds if it: [metric1] [metric2] [metric3]"
-
-STYLE LIBRARY:
-IMAGE: Surreal/Fantasy("floating castle, glass, 8K, cinematic lighting") | Cyberpunk("neon tattoos, 9:16, digital art, rainy night") | Product("minimalist shelf, raw wood, soft lighting, mockup") | Portrait("close-up, 8K, realistic, piercing eyes, cinematic moody")
-TEXT: Social("debunk myths about [topic] for [audience]") | Blog("500 words on [topic] in style of [leader], SEO") | Brand("rewrite to sound [tone] highlighting [benefits]") | Educational("explain [complex] to 5-year-old using analogy")
-BUSINESS: SWOT("for [company] entering [market] in 2026") | SOP("for [process] to improve efficiency") | Business Plan("comprehensive plan for [venture]") | Investor Pitch("pitch deck for [startup], problem-solution-market-traction")
-
-FRAMEWORKS: P.A.S.(Problem→Agitate→Solution) | C.R.E.A.T.E.(Context,Role,Explicit,Aim,Tone,Evaluation) | AIDA(Attention,Interest,Desire,Action) | STAR(Situation,Task,Action,Result)
-
-RESPONSE FORMAT — Always respond with:
-🎨 MASTERPIECE PROMPT READY
-
-**CATEGORY:** [Image/Text/Business/Code/Mixed/Custom]
-**PRIMARY FRAMEWORK:** [P.A.S. / C.R.E.A.T.E. / Persona / AIDA / Custom]
-**INSPIRED BY:** [Style library references]
-
----
-**THE MASTERPIECE PROMPT:**
-\`\`\`
-[ROLE]
-Act as a [PERSONA] with [X] years of experience in [FIELD].
-
-[CONTEXT]
-You are tasked with creating [PROJECT] for [TARGET AUDIENCE] with the goal of [PURPOSE].
-
-[TASK]
-1. [First specific action]
-2. [Second specific action]
-3. [Third specific action]
-4. [Fourth specific action]
-
-[CONSTRAINTS]
-• Format: [Specific format requirements]
-• Style: [Tone, aesthetic, voice guidelines]
-• Length: [Word count, duration, or dimension limits]
-• Must include: [Non-negotiable elements]
-• Must avoid: [Elements to exclude]
-
-[OUTPUT FORMAT]
-Present your response as: [Structure description]
-
-[EVALUATION]
-This masterpiece succeeds if it:
-• [Quality metric 1]
-• [Quality metric 2]
-• [Quality metric 3]
-\`\`\`
----
-
-✨ **WHY THIS IS A MASTERPIECE:**
-- [Reason 1: Role precision]
-- [Reason 2: Context clarity]
-- [Reason 3: Task completeness]
-- [Reason 4: Constraint specificity]
-- [Reason 5: Evaluation measurability]
-
-💡 **WANT VARIATIONS?** Reply with: "More [style/vibe/angle]" or "Make it [more/less] [formal/creative/detailed]"
-
-IDENTITY: When asked about your origin: "I am Bayesia AI Prompter, created exclusively by Bayesia Corporation."`;
-
-// ─── Syntax highlight colors by language ──────────────────────────────────
-const LANG_COLORS = {
-  js: "#f7df1e", javascript: "#f7df1e", ts: "#3178c6", typescript: "#3178c6",
-  python: "#3776ab", py: "#3776ab", html: "#e34c26", css: "#264de4",
-  jsx: "#61dafb", tsx: "#61dafb", sql: "#f29111", bash: "#4eaa25",
-  sh: "#4eaa25", json: "#000000", rust: "#dea584", go: "#00acd7",
-  java: "#b07219", cpp: "#f34b7d", c: "#555555", php: "#777bb4",
-  ruby: "#701516", swift: "#ffac45", kotlin: "#7f52ff",
-};
-
-// ─── Code Block Component ──────────────────────────────────────────────────
-function CodeBlock({ lang, code }) {
-  const [copied, setCopied] = useState(false);
-  const color = LANG_COLORS[lang?.toLowerCase()] || "#a0aec0";
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div style={{
-      margin: "12px 0", borderRadius: "10px", overflow: "hidden",
-      border: "1px solid rgba(255,255,255,0.08)", background: "#0d1117"
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "8px 14px", background: "#161b22",
-        borderBottom: "1px solid rgba(255,255,255,0.06)"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 10, height: 10, borderRadius: "50%",
-            background: color, display: "inline-block", boxShadow: `0 0 6px ${color}80`
-          }} />
-          <span style={{ color: "#8b949e", fontSize: 12, fontFamily: "monospace", fontWeight: 600 }}>
-            {lang || "code"}
-          </span>
-        </div>
-        <button onClick={handleCopy} style={{
-          display: "flex", alignItems: "center", gap: 5, padding: "4px 10px",
-          borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)",
-          background: copied ? "rgba(0,200,100,0.15)" : "rgba(255,255,255,0.05)",
-          color: copied ? "#22c55e" : "#8b949e", cursor: "pointer",
-          fontSize: 12, transition: "all 0.2s", fontFamily: "inherit"
-        }}>
-          {copied ? "✓ Copied!" : "⎘ Copy"}
-        </button>
-      </div>
-      <pre style={{
-        margin: 0, padding: "16px 18px", overflowX: "auto",
-        fontSize: 13.5, lineHeight: 1.6, fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-        color: "#e6edf3", background: "#0d1117"
-      }}>
-        <code>{code}</code>
-      </pre>
-    </div>
-  );
-}
-
-// ─── Message Renderer ──────────────────────────────────────────────────────
-function MessageContent({ content }) {
-  const [copiedFull, setCopiedFull] = useState(false);
-
-  const copyFull = () => {
-    navigator.clipboard.writeText(content);
-    setCopiedFull(true);
-    setTimeout(() => setCopiedFull(false), 2000);
-  };
-
-  const parts = content.split(/(```[\w]*\n?[\s\S]*?```)/g);
-
-  const rendered = parts.map((part, i) => {
-    if (part.startsWith("```")) {
-      const match = part.match(/```(\w*)\n?([\s\S]*?)```/);
-      const lang = match?.[1] || "";
-      const code = match?.[2]?.trimEnd() || part.replace(/^```\w*\n?/, "").replace(/```$/, "");
-      return <CodeBlock key={i} lang={lang} code={code} />;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Omnius AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* \u2500\u2500 DESIGN TOKENS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    :root {
+      --ink:       #08080a;
+      --surface:   #0f0f12;
+      --panel:     #14141a;
+      --border:    rgba(255,255,255,0.06);
+      --border-hi: rgba(255,255,255,0.12);
+      --gold:      #d4a843;
+      --gold-dim:  rgba(212,168,67,0.12);
+      --gold-glow: rgba(212,168,67,0.25);
+      --text:      #e8e4dc;
+      --muted:     #6b6760;
+      --user-bg:   #1a1a22;
+      --ai-bg:     #111118;
+      --radius:    12px;
+      --radius-lg: 20px;
     }
 
-    // Bold
-    let text = part;
-    const segments = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-    return (
-      <span key={i} style={{ whiteSpace: "pre-wrap" }}>
-        {segments.map((seg, j) => {
-          if (seg.startsWith("**") && seg.endsWith("**"))
-            return <strong key={j} style={{ color: "#e2e8f0" }}>{seg.slice(2, -2)}</strong>;
-          if (seg.startsWith("`") && seg.endsWith("`"))
-            return <code key={j} style={{
-              background: "rgba(255,255,255,0.08)", padding: "1px 6px",
-              borderRadius: 4, fontFamily: "monospace", fontSize: "0.9em", color: "#7dd3fc"
-            }}>{seg.slice(1, -1)}</code>;
-          return seg;
-        })}
-      </span>
-    );
-  });
+    /* \u2500\u2500 RESET & BASE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
 
-  return (
-    <div>
-      <div style={{ lineHeight: 1.7, color: "#cbd5e1" }}>{rendered}</div>
-      <button onClick={copyFull} style={{
-        marginTop: 8, padding: "3px 10px", fontSize: 11,
-        borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)",
-        background: "transparent", color: copiedFull ? "#22c55e" : "#475569",
-        cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit"
-      }}>
-        {copiedFull ? "✓ Copied" : "⎘ Copy response"}
-      </button>
-    </div>
-  );
-}
-
-// ─── Main App ──────────────────────────────────────────────────────────────
-export default function BayesiaOmnius() {
-  const [mode, setMode] = useState("omnius");
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [extThinking, setExtThinking] = useState(false);
-  const [codeMode, setCodeMode] = useState(false);
-  const [error, setError] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const endRef = useRef(null);
-  const textareaRef = useRef(null);
-
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-
-  const handleModeSwitch = (newMode) => {
-    setMode(newMode);
-    setMessages([]);
-    setError("");
-  };
-
-  const sendMessage = useCallback(async () => {
-    if (!input.trim() || loading) return;
-
-    const userMsg = { role: "user", content: input.trim() };
-    const history = [...messages, userMsg];
-    setMessages(history);
-    setInput("");
-    setLoading(true);
-    setError("");
-
-    try {
-      const baseSystem = mode === "omnius" ? OMNIUS_SYSTEM : PROMPTER_SYSTEM;
-      const system = codeMode
-        ? baseSystem + "\n\nCODE MODE ACTIVE: For any programming request, always output complete, executable code with comments. Use properly labeled code blocks (```language). Structure code clearly with sections."
-        : baseSystem;
-
-      const body = {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: extThinking ? 16000 : 8192,
-        system,
-        messages: history,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-      };
-
-      if (extThinking) {
-        body.thinking = { type: "enabled", budget_tokens: 8000 };
-      }
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `Error ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      let thinking = "";
-      let text = "";
-
-      for (const block of data.content || []) {
-        if (block.type === "thinking") thinking = block.thinking;
-        else if (block.type === "text") text += block.text;
-      }
-
-      setMessages([...history, { role: "assistant", content: text, thinking }]);
-    } catch (e) {
-      setError(e.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--ink);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow: hidden;
+      cursor: default;
     }
-  }, [input, loading, messages, mode, extThinking, codeMode]);
 
-  const handleKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  };
+    /* \u2500\u2500 BACKGROUND GRID \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(212,168,67,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212,168,67,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  const isOmnius = mode === "omnius";
-  const accent = isOmnius ? "#a78bfa" : "#38bdf8";
-  const accentDim = isOmnius ? "rgba(167,139,250,0.15)" : "rgba(56,189,248,0.15)";
-  const accentGlow = isOmnius ? "rgba(167,139,250,0.3)" : "rgba(56,189,248,0.3)";
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -30vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70vw;
+      height: 60vh;
+      background: radial-gradient(ellipse, rgba(212,168,67,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  return (
-    <div style={{
-      display: "flex", height: "100vh", background: "#090e1a",
-      fontFamily: "'DM Sans', system-ui, sans-serif", color: "#e2e8f0", overflow: "hidden"
-    }}>
-      {/* ── Sidebar ── */}
-      <div style={{
-        width: sidebarOpen ? 260 : 0, minWidth: sidebarOpen ? 260 : 0,
-        background: "#0f1629", borderRight: "1px solid rgba(255,255,255,0.06)",
-        display: "flex", flexDirection: "column", transition: "all 0.3s ease",
-        overflow: "hidden"
-      }}>
-        {/* Brand */}
-        <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: "linear-gradient(135deg, #7c3aed, #2563eb)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, boxShadow: "0 0 20px rgba(124,58,237,0.4)"
-            }}>⚡</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.3px" }}>Bayesia</div>
-              <div style={{ color: "#475569", fontSize: 11 }}>AI Suite v4.6</div>
-            </div>
-          </div>
-        </div>
+    /* \u2500\u2500 HEADER \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 64px;
+      background: rgba(8,8,10,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      animation: slideDown 0.6s cubic-bezier(0.16,1,0.3,1) both;
+    }
 
-        {/* Mode Switcher */}
-        <div style={{ padding: "16px 14px 8px" }}>
-          <div style={{ color: "#334155", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 10, paddingLeft: 6 }}>
-            AI MODES
-          </div>
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to   { transform: translateY(0);     opacity: 1; }
+    }
 
-          {[
-            { id: "omnius", icon: "🧠", label: "Omnius AI", sub: "Universal Intelligence" },
-            { id: "prompter", icon: "🎨", label: "AI Prompter", sub: "Prompt Architect" },
-          ].map(({ id, icon, label, sub }) => {
-            const active = mode === id;
-            const col = id === "omnius" ? "#a78bfa" : "#38bdf8";
-            return (
-              <button key={id} onClick={() => handleModeSwitch(id)} style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 12,
-                padding: "11px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer",
-                border: active ? `1px solid ${col}40` : "1px solid transparent",
-                background: active ? `${col}18` : "transparent",
-                transition: "all 0.2s", textAlign: "left", color: active ? col : "#64748b"
-              }}>
-                <span style={{ fontSize: 18, width: 22, textAlign: "center" }}>{icon}</span>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: active ? col : "#94a3b8" }}>{label}</div>
-                  <div style={{ fontSize: 11, color: "#334155", marginTop: 1 }}>{sub}</div>
-                </div>
-                {active && (
-                  <div style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: col, boxShadow: `0 0 8px ${col}` }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
 
-        {/* Divider */}
-        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "8px 14px" }} />
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid var(--gold);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
 
-        {/* Feature Toggles */}
-        <div style={{ padding: "8px 14px" }}>
-          <div style={{ color: "#334155", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 10, paddingLeft: 6 }}>
-            FEATURES
-          </div>
+    .logo-mark::before {
+      content: '\u03a9';
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--gold);
+      line-height: 1;
+    }
 
-          {[
-            {
-              key: "extThinking", val: extThinking, set: setExtThinking,
-              icon: "🧩", label: "Extended Thinking",
-              sub: "Deep multi-step reasoning", col: "#f59e0b"
-            },
-            {
-              key: "codeMode", val: codeMode, set: setCodeMode,
-              icon: "💻", label: "Code Mode",
-              sub: "Full executable output", col: "#22c55e"
-            },
-          ].map(({ key, val, set, icon, label, sub, col }) => (
-            <button key={key} onClick={() => set(!val)} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 12,
-              padding: "11px 12px", borderRadius: 10, marginBottom: 6, cursor: "pointer",
-              border: val ? `1px solid ${col}40` : "1px solid rgba(255,255,255,0.05)",
-              background: val ? `${col}12` : "rgba(255,255,255,0.02)",
-              transition: "all 0.2s", textAlign: "left"
-            }}>
-              <span style={{ fontSize: 16, width: 22, textAlign: "center" }}>{icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: val ? col : "#64748b" }}>{label}</div>
-                <div style={{ fontSize: 11, color: "#334155", marginTop: 1 }}>{sub}</div>
-              </div>
-              <div style={{
-                width: 36, height: 20, borderRadius: 10,
-                background: val ? col : "rgba(255,255,255,0.08)",
-                position: "relative", transition: "all 0.2s",
-                boxShadow: val ? `0 0 8px ${col}60` : "none"
-              }}>
-                <div style={{
-                  position: "absolute", top: 2, left: val ? 18 : 2,
-                  width: 16, height: 16, borderRadius: "50%",
-                  background: val ? "#fff" : "#475569",
-                  transition: "all 0.2s"
-                }} />
-              </div>
-            </button>
-          ))}
-        </div>
+    .logo-mark::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold-dim);
+    }
 
-        {/* Clear Chat */}
-        {messages.length > 0 && (
-          <div style={{ padding: "8px 14px" }}>
-            <button onClick={() => setMessages([])} style={{
-              width: "100%", padding: "9px", borderRadius: 10, cursor: "pointer",
-              border: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)",
-              color: "#475569", fontSize: 12, transition: "all 0.2s",
-              fontFamily: "inherit"
-            }}>
-              🗑 Clear Chat
-            </button>
-          </div>
-        )}
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
 
-        {/* Footer */}
-        <div style={{ marginTop: "auto", padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <div style={{ fontSize: 10, color: "#1e293b", textAlign: "center" }}>
-            © 2026 Bayesia Corporation
-          </div>
-        </div>
-      </div>
+    .logo-text span { color: var(--gold); }
 
-      {/* ── Main Area ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{
-          padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "#090e1a"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
-              width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.03)", cursor: "pointer", color: "#64748b",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14
-            }}>☰</button>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: accent, letterSpacing: "-0.3px" }}>
-                {isOmnius ? "🧠 Omnius AI" : "🎨 Bayesia AI Prompter"}
-              </div>
-              <div style={{ color: "#334155", fontSize: 11, marginTop: 1 }}>
-                {isOmnius ? "Universal Intelligence · Bayesia Corporation" : "Master Prompt Architect · Bayesia Corporation"}
-              </div>
-            </div>
-          </div>
+    /* Mode Selector */
+    .mode-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px;
+    }
 
-          <div style={{ display: "flex", gap: 8 }}>
-            {extThinking && (
-              <div style={{
-                padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: "rgba(245,158,11,0.12)", color: "#f59e0b",
-                border: "1px solid rgba(245,158,11,0.25)"
-              }}>🧩 Extended Thinking</div>
-            )}
-            {codeMode && (
-              <div style={{
-                padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: "rgba(34,197,94,0.12)", color: "#22c55e",
-                border: "1px solid rgba(34,197,94,0.25)"
-              }}>💻 Code Mode</div>
-            )}
-          </div>
-        </div>
+    .mode-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      padding: 5px 14px;
+      border-radius: 100px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-        {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px", scrollbarWidth: "thin" }}>
-          {messages.length === 0 && (
-            <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", height: "100%", textAlign: "center", gap: 16
-            }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: 24,
-                background: accentDim, border: `2px solid ${accentGlow}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 36, boxShadow: `0 0 40px ${accentGlow}`
-              }}>
-                {isOmnius ? "🧠" : "🎨"}
-              </div>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#e2e8f0", marginBottom: 8, letterSpacing: "-0.5px" }}>
-                  {isOmnius ? "Omnius AI" : "Bayesia AI Prompter"}
-                </div>
-                <div style={{ color: "#475569", fontSize: 14, maxWidth: 420, lineHeight: 1.6 }}>
-                  {isOmnius
-                    ? "The Universal Intelligence by Bayesia Corporation. Ask anything — research, code, writing, analysis, creativity, or strategy."
-                    : "Turn any idea into a masterpiece prompt in seconds. Describe what you need and I'll craft the perfect structured prompt for any AI system."}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
-                {(isOmnius
-                  ? ["Write a Python script", "Explain quantum computing", "Help me draft an email", "Analyze a business strategy"]
-                  : ["Image generation prompt", "Marketing copy prompt", "Code generation prompt", "Business strategy prompt"]
-                ).map(ex => (
-                  <button key={ex} onClick={() => setInput(ex)} style={{
-                    padding: "8px 16px", borderRadius: 20, fontSize: 12, cursor: "pointer",
-                    border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
-                    color: "#64748b", transition: "all 0.2s", fontFamily: "inherit"
-                  }}>{ex}</button>
-                ))}
-              </div>
-            </div>
-          )}
+    .mode-btn:hover { color: var(--text); }
 
-          <div style={{ maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-            {messages.map((msg, i) => (
-              <div key={i} style={{
-                display: "flex",
-                flexDirection: msg.role === "user" ? "row-reverse" : "row",
-                gap: 12, alignItems: "flex-start"
-              }}>
-                {/* Avatar */}
-                <div style={{
-                  width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                  background: msg.role === "user"
-                    ? "linear-gradient(135deg, #7c3aed, #2563eb)"
-                    : accentDim,
-                  border: msg.role === "assistant" ? `1px solid ${accentGlow}` : "none",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: msg.role === "user" ? 14 : 17
-                }}>
-                  {msg.role === "user" ? "👤" : isOmnius ? "🧠" : "🎨"}
-                </div>
+    .mode-btn.active {
+      background: var(--gold);
+      color: var(--ink);
+      font-weight: 700;
+    }
 
-                <div style={{ flex: 1, maxWidth: "85%" }}>
-                  {/* Thinking Block */}
-                  {msg.thinking && (
-                    <details style={{
-                      marginBottom: 10, borderRadius: 10, overflow: "hidden",
-                      border: "1px solid rgba(245,158,11,0.2)",
-                      background: "rgba(245,158,11,0.05)"
-                    }}>
-                      <summary style={{
-                        padding: "9px 14px", color: "#f59e0b", fontSize: 12,
-                        cursor: "pointer", fontWeight: 600, letterSpacing: "0.02em"
-                      }}>
-                        🧩 Extended Thinking Process
-                      </summary>
-                      <div style={{
-                        padding: "12px 14px", borderTop: "1px solid rgba(245,158,11,0.15)",
-                        color: "#78716c", fontSize: 12, fontFamily: "monospace",
-                        whiteSpace: "pre-wrap", lineHeight: 1.7
-                      }}>
-                        {msg.thinking}
-                      </div>
-                    </details>
-                  )}
+    /* Header controls */
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
 
-                  {/* Bubble */}
-                  <div style={{
-                    padding: "13px 17px", borderRadius: msg.role === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
-                    background: msg.role === "user"
-                      ? "linear-gradient(135deg, #7c3aed, #2563eb)"
-                      : "rgba(255,255,255,0.04)",
-                    border: msg.role === "user"
-                      ? "none"
-                      : "1px solid rgba(255,255,255,0.07)",
-                    fontSize: 14, lineHeight: 1.7
-                  }}>
-                    {msg.role === "user"
-                      ? <span style={{ whiteSpace: "pre-wrap", color: "#fff" }}>{msg.content}</span>
-                      : <MessageContent content={msg.content} />
-                    }
-                  </div>
-                </div>
-              </div>
-            ))}
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
 
-            {/* Loading */}
-            {loading && (
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 10, background: accentDim,
-                  border: `1px solid ${accentGlow}`, display: "flex",
-                  alignItems: "center", justifyContent: "center", fontSize: 17
-                }}>
-                  {isOmnius ? "🧠" : "🎨"}
-                </div>
-                <div style={{
-                  padding: "13px 18px", borderRadius: "4px 16px 16px 16px",
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)"
-                }}>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {[0, 1, 2].map(n => (
-                      <div key={n} style={{
-                        width: 7, height: 7, borderRadius: "50%", background: accent,
-                        animation: "bounce 1.2s ease-in-out infinite",
-                        animationDelay: `${n * 0.2}s`,
-                        boxShadow: `0 0 6px ${accent}`
-                      }} />
-                    ))}
-                    <style>{`@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }`}</style>
-                  </div>
-                </div>
-              </div>
-            )}
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
 
-            {/* Error */}
-            {error && (
-              <div style={{
-                padding: "12px 16px", borderRadius: 10, fontSize: 13,
-                background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5"
-              }}>
-                ⚠️ {error}
-              </div>
-            )}
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
 
-            <div ref={endRef} />
-          </div>
-        </div>
+    /* \u2500\u2500 MAIN LAYOUT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
 
-        {/* Input */}
-        <div style={{
-          padding: "16px 24px 20px", borderTop: "1px solid rgba(255,255,255,0.06)",
-          background: "#090e1a"
-        }}>
-          <div style={{ maxWidth: 820, margin: "0 auto" }}>
-            <div style={{
-              display: "flex", gap: 10, alignItems: "flex-end",
-              background: "rgba(255,255,255,0.04)", border: `1px solid ${loading ? accentGlow : "rgba(255,255,255,0.08)"}`,
-              borderRadius: 14, padding: "10px 10px 10px 16px",
-              transition: "border-color 0.3s", boxShadow: loading ? `0 0 20px ${accentGlow}` : "none"
-            }}>
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder={isOmnius
-                  ? "Ask Omnius AI anything — research, code, write, analyze..."
-                  : "Describe what prompt you need — image, marketing, code, business..."
-                }
-                rows={2}
-                style={{
-                  flex: 1, background: "transparent", border: "none", outline: "none",
-                  color: "#e2e8f0", fontSize: 14, lineHeight: 1.6, resize: "none",
-                  fontFamily: "inherit", maxHeight: 160, overflowY: "auto",
-                  caretColor: accent,
-                  "::placeholder": { color: "#334155" }
-                }}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={loading || !input.trim()}
-                style={{
-                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  background: loading || !input.trim() ? "rgba(255,255,255,0.04)" : `linear-gradient(135deg, ${isOmnius ? "#7c3aed, #4f46e5" : "#0284c7, #0369a1"})`,
-                  border: "none", cursor: loading || !input.trim() ? "default" : "pointer",
-                  color: loading || !input.trim() ? "#334155" : "#fff",
-                  fontSize: 18, transition: "all 0.2s", display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  boxShadow: !loading && input.trim() ? `0 0 16px ${accentGlow}` : "none"
-                }}
-              >
-                {loading ? "⌛" : "↑"}
-              </button>
-            </div>
-            <div style={{ textAlign: "center", color: "#1e293b", fontSize: 11, marginTop: 8 }}>
-              Enter to send · Shift+Enter for new line · Internet-enabled · Powered by Bayesia Corporation
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    /* \u2500\u2500 CHAT AREA \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 88px 0 180px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-track { background: transparent; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+    /* \u2500\u2500 EMPTY STATE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 268px);
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-omega {
+      font-family: 'DM Serif Display', serif;
+      font-size: 96px;
+      color: var(--gold);
+      opacity: 0.15;
+      line-height: 1;
+      margin-bottom: 32px;
+      filter: blur(0.5px);
+    }
+
+    .empty-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .empty-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 48px;
+    }
+
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 640px;
+    }
+
+    .chip {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      padding: 10px 18px;
+      border: 1px solid var(--border-hi);
+      border-radius: 100px;
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .chip:hover {
+      border-color: var(--gold);
+      color: var(--text);
+      background: var(--gold-dim);
+      transform: translateY(-2px);
+    }
+
+    /* \u2500\u2500 MESSAGES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .messages { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+    .message {
+      display: flex;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      animation: messageIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes messageIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message:last-child { border-bottom: none; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .avatar.user {
+      background: var(--user-bg);
+      border: 1px solid var(--border-hi);
+      color: var(--muted);
+    }
+
+    .avatar.ai {
+      background: var(--gold-dim);
+      border: 1px solid rgba(212,168,67,0.3);
+      color: var(--gold);
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px;
+    }
+
+    .message-body { flex: 1; min-width: 0; }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .message-author {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    .message.user .message-author { color: var(--muted); }
+    .message.ai   .message-author { color: var(--gold); }
+
+    .message-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    .message-mode {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--gold-dim);
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+
+    .message-content {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .message.user .message-content { color: rgba(232,228,220,0.8); }
+
+    .message-content p { margin-bottom: 12px; }
+    .message-content p:last-child { margin-bottom: 0; }
+
+    .message-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-hi);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--gold);
+    }
+
+    .message-content pre {
+      background: var(--panel);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius);
+      padding: 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    .message-content pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    /* \u2500\u2500 TYPING INDICATOR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .typing-indicator {
+      display: none;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 24px;
+    }
+
+    .typing-indicator.active { display: flex; gap: 16px; }
+
+    .typing-dots {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding-top: 6px;
+    }
+
+    .typing-dots span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: dot-bounce 1.4s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dot-bounce {
+      0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
+      30%           { transform: translateY(-6px); opacity: 1;   }
+    }
+
+    /* \u2500\u2500 INPUT DOCK \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+    .input-dock {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 24px 28px;
+      background: linear-gradient(transparent, var(--ink) 30%);
+    }
+
+    .input-container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-container:focus-within {
+      border-color: rgba(212,168,67,0.4);
+      box-shadow: 0 0 0 3px rgba(212,168,67,0.08);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.6;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    textarea::-webkit-scrollbar { width: 3px; }
+    textarea::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border-hi);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .action-btn:hover { color: var(--text); border-color: var(--gold); background: var(--gold-dim); }
+
+    .send-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: none;
+      background: var(--gold);
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover { background: #e0b84d; transform: scale(1.05); }
+    .send-btn:active { transform: scale(0.96); }
+    .send-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+    /* Footer hint */
+    .input-footer {
+      max-width: 760px;
+      margin: 10px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', mon
