@@ -114,9 +114,7 @@
     (function() {
       // ---- CONFIG: Your Render backend URL (replace after deploying backend) ----
       const BACKEND_URL = 'https://quantam-ai.onrender.com'
-      // ---- Supabase (optional) ----
-      const SUPABASE_URL = 'https://your-project.supabase.co';  // <-- REPLACE if using Supabase
-      const SUPABASE_ANON_KEY = 'your-anon-key';
+      const SUPABASE_ANON_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2amFzbW1va2NqbXBhd3Juem96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzM4MjAsImV4cCI6MjA4Nzc0OTgyMH0.aS2qgAOL1OwVVr-7ok2z0M3DiaDK-rCdjLp-1moXFqA';
       let supabase = null;
       try {
         if (!SUPABASE_URL.includes('your-project')) {
