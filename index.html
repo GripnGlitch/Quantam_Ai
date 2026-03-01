@@ -200,9 +200,10 @@
 
   <script>
     (function() {
-      // ---------- HARDCODED CONFIG ----------
-      const OPENROUTER_API_KEY = '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';
-      const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+      // ---------- CONFIG: BACKEND PROXY (API key kept secret on server) ----------
+      // The new API key (not used directly in frontend, only for reference)
+      // const OPENROUTER_API_KEY = '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';
+      const BACKEND_URL = '/api/chat';  // your backend endpoint that forwards to OpenRouter
 
       // ---------- SUPABASE CONFIG (REPLACE WITH YOUR CREDENTIALS) ----------
       const SUPABASE_URL = 'https://your-project.supabase.co';  // <-- REPLACE
@@ -492,7 +493,7 @@
         settingsModal.classList.add('hidden');
       });
 
-      // ---------- SEND MESSAGE ----------
+      // ---------- SEND MESSAGE (via backend proxy) ----------
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
       document.getElementById('userInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -538,21 +539,18 @@
         ];
 
         try {
-          const response = await fetch(OPENROUTER_ENDPOINT, {
+          // Send request to backend (which holds the API key securely)
+          const response = await fetch(BACKEND_URL, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': window.location.href,
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: selectedModel,
               messages: messagesForAPI,
-              stream: true,
+              stream: true
             })
           });
 
-          if (!response.ok) throw new Error('API error');
+          if (!response.ok) throw new Error('Backend error: ' + response.status);
 
           const reader = response.body.getReader();
           const decoder = new TextDecoder('utf-8');
@@ -599,15 +597,13 @@
               { role: 'system', content: 'Provide a step-by-step reasoning for the last answer, formatted as a node flow like:\n[START] ...\n  → [Node 1] ...\n    → [Node 1a] ...' },
               { role: 'user', content: `Question: ${text}\nAnswer: ${assistantMessage}` }
             ];
-            const reasoningRes = await fetch(OPENROUTER_ENDPOINT, {
+            const reasoningRes = await fetch(BACKEND_URL, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: selectedModel,
                 messages: reasoningMessages,
+                stream: false  // non‑streaming for simplicity
               })
             });
             const reasoningData = await reasoningRes.json();
@@ -648,4 +644,4 @@
     })();
   </script>
 </body>
-</html>
+    </html>
