@@ -10,113 +10,48 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/index.min.js"></script>
-  <!-- Supabase -->
+  <!-- Supabase (optional – replace credentials or it will fallback to localStorage) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* node flow styling */
-    .node-flow {
-      background: #f1f5f9;
-      border-left: 4px solid #3b82f6;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      margin: 1rem 0;
-      font-family: 'Fira Code', monospace;
-      white-space: pre-wrap;
-    }
-    .dark .node-flow {
-      background: #1e293b;
-      border-left-color: #60a5fa;
-      color: #e2e8f0;
-    }
-    .node-item {
-      margin-left: 1.5rem;
-      border-left: 2px dashed #94a3b8;
-      padding-left: 1rem;
-      margin-top: 0.5rem;
-    }
-    .typing span {
-      animation: blink 1.4s infinite;
-      opacity: 0.4;
-    }
+    .node-flow { background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; font-family: 'Fira Code', monospace; white-space: pre-wrap; }
+    .dark .node-flow { background: #1e293b; border-left-color: #60a5fa; color: #e2e8f0; }
+    .typing span { animation: blink 1.4s infinite; opacity: 0.4; }
     .typing span:nth-child(2) { animation-delay: 0.2s; }
     .typing span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes blink { 50% { opacity: 1; } }
-    /* mobile sidebar */
     .sidebar-open { transform: translateX(0); }
     .sidebar-closed { transform: translateX(-100%); }
-    @media (min-width: 768px) {
-      .sidebar-closed { transform: translateX(0); }
-    }
-    /* message bubbles */
-    .message pre {
-      background: #f3f4f6;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
-    }
-    .dark .message pre {
-      background: #1f2937;
-    }
-    .model-badge {
-      display: inline-block;
-      background: #e2e8f0;
-      padding: 0.2rem 0.6rem;
-      border-radius: 9999px;
-      font-size: 0.7rem;
-      margin-left: 0.5rem;
-    }
-    .dark .model-badge {
-      background: #334155;
-      color: #cbd5e1;
-    }
+    @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
+    .message pre { background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; }
+    .dark .message pre { background: #1f2937; }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased">
-  <!-- loading overlay -->
   <div id="loading" class="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
-    <div class="text-center">
-      <i class="fas fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i>
-      <p class="text-gray-600 dark:text-gray-300">Initializing Omnius AI...</p>
-    </div>
+    <div class="text-center"><i class="fas fa-circle-notch fa-spin text-4xl text-indigo-600 mb-4"></i><p class="text-gray-600 dark:text-gray-300">Initializing Omnius AI...</p></div>
   </div>
 
-  <!-- main app (hidden until JS loads) -->
   <div id="app" class="hidden min-h-screen flex flex-col">
     <!-- header -->
     <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2 px-4 flex items-center justify-between shadow-sm">
       <div class="flex items-center gap-2">
-        <button id="sidebarToggle" class="md:hidden text-xl p-1">
-          <i class="fas fa-bars"></i>
-        </button>
-        <!-- persona toggle (mode-locked) -->
+        <button id="sidebarToggle" class="md:hidden text-xl p-1"><i class="fas fa-bars"></i></button>
+        <!-- persona toggle -->
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1 text-sm">
           <button id="personaOmnius" class="px-3 py-1 rounded-full font-semibold transition-colors persona-btn active" data-persona="omnius">Omnius AI</button>
           <button id="personaPrompter" class="px-3 py-1 rounded-full font-semibold transition-colors persona-btn" data-persona="prompter">AI Prompter</button>
         </div>
       </div>
       <div class="flex items-center gap-1">
-        <!-- performance modes (desktop) -->
         <div class="hidden md:flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1 text-xs mr-2">
           <button id="modeFast" class="px-3 py-1 rounded-full mode-btn" data-mode="fast">🚀 Fast</button>
           <button id="modePro" class="px-3 py-1 rounded-full mode-btn active-mode" data-mode="pro">⚡ Pro</button>
           <button id="modeResearch" class="px-3 py-1 rounded-full mode-btn" data-mode="research">🔬 Research</button>
         </div>
-        <!-- extended thinking toggle -->
-        <button id="extendedToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Extended Thinking">
-          <i class="fas fa-brain text-lg"></i>
-        </button>
-        <!-- code mode toggle -->
-        <button id="codeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Code Mode">
-          <i class="fas fa-code text-lg"></i>
-        </button>
-        <!-- dark mode toggle -->
-        <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-          <i class="fas fa-moon"></i>
-        </button>
-        <!-- settings (model selector) -->
-        <button id="settingsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-          <i class="fas fa-cog"></i>
-        </button>
+        <button id="extendedToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Extended Thinking"><i class="fas fa-brain text-lg"></i></button>
+        <button id="codeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Code Mode"><i class="fas fa-code text-lg"></i></button>
+        <button id="darkModeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><i class="fas fa-moon"></i></button>
+        <button id="settingsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><i class="fas fa-cog"></i></button>
       </div>
     </header>
 
@@ -127,39 +62,24 @@
       <button id="mobileModeResearch" class="px-3 py-1 rounded-full mode-btn-mobile" data-mode="research">🔬 Research</button>
     </div>
 
-    <!-- main area with sidebar -->
     <div class="flex flex-1 overflow-hidden relative">
-      <!-- sidebar (chat history) -->
+      <!-- sidebar -->
       <aside id="sidebar" class="sidebar-closed md:translate-x-0 absolute md:static z-20 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-full transition-transform duration-200 flex flex-col">
         <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-          <button id="newChatBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 px-3 flex items-center gap-2 text-sm font-medium">
-            <i class="fas fa-plus"></i> New chat
-          </button>
+          <button id="newChatBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 px-3 flex items-center gap-2 text-sm font-medium"><i class="fas fa-plus"></i> New chat</button>
         </div>
-        <div id="chatHistoryList" class="flex-1 overflow-y-auto p-2 space-y-1 text-sm">
-          <!-- populated by JS -->
-        </div>
-        <!-- user info -->
-        <div class="p-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 truncate flex items-center gap-2">
-          <i class="fas fa-user-circle"></i>
-          <span id="userIdDisplay"></span>
-        </div>
+        <div id="chatHistoryList" class="flex-1 overflow-y-auto p-2 space-y-1 text-sm"></div>
+        <div class="p-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 truncate flex items-center gap-2"><i class="fas fa-user-circle"></i><span id="userIdDisplay"></span></div>
       </aside>
 
-      <!-- main chat area -->
+      <!-- main chat -->
       <main class="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900">
-        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
-          <!-- messages go here -->
-        </div>
-
-        <!-- input area -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
         <div class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
           <div class="max-w-4xl mx-auto flex gap-2 items-end">
             <div class="flex-1 relative">
               <textarea id="userInput" rows="1" placeholder="Message Omnius..." class="w-full resize-none border border-gray-300 dark:border-gray-600 rounded-2xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white max-h-40"></textarea>
-              <button id="sendBtn" class="absolute right-2 bottom-2 p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-600 rounded-full">
-                <i class="fas fa-arrow-up"></i>
-              </button>
+              <button id="sendBtn" class="absolute right-2 bottom-2 p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-600 rounded-full"><i class="fas fa-arrow-up"></i></button>
             </div>
           </div>
           <div class="max-w-4xl mx-auto flex justify-between items-center mt-1 text-xs text-gray-400 px-2">
@@ -171,23 +91,15 @@
     </div>
   </div>
 
-  <!-- settings modal (model selection + system prompt) -->
+  <!-- settings modal -->
   <div id="settingsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-5 shadow-xl">
-      <h2 class="text-lg font-semibold mb-4 flex justify-between items-center">
-        Settings
-        <button id="closeSettings"><i class="fas fa-times"></i></button>
-      </h2>
+      <h2 class="text-lg font-semibold mb-4 flex justify-between items-center">Settings <button id="closeSettings"><i class="fas fa-times"></i></button></h2>
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Select Model</label>
-          <select id="modelSelect" class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
-            <!-- populated by JS -->
-          </select>
-          <div class="mt-1 text-xs text-gray-500 flex items-center gap-1">
-            <span>Intelligence:</span>
-            <span id="modelStars" class="text-amber-500">★★★★★</span>
-          </div>
+          <select id="modelSelect" class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600"></select>
+          <div class="mt-1 text-xs text-gray-500 flex items-center gap-1"><span>Intelligence:</span><span id="modelStars" class="text-amber-500">★★★★★</span></div>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">System Prompt (global)</label>
@@ -200,14 +112,11 @@
 
   <script>
     (function() {
-      // ---------- CONFIG: BACKEND PROXY (API key kept secret on server) ----------
-      // The new API key (not used directly in frontend, only for reference)
-      // const OPENROUTER_API_KEY = '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';
-      const BACKEND_URL = '/api/chat';  // your backend endpoint that forwards to OpenRouter
-
-      // ---------- SUPABASE CONFIG (REPLACE WITH YOUR CREDENTIALS) ----------
-      const SUPABASE_URL = 'https://your-project.supabase.co';  // <-- REPLACE
-      const SUPABASE_ANON_KEY = 'your-anon-key';                // <-- REPLACE
+      // ---- CONFIG: Your Render backend URL (replace after deploying backend) ----
+      const BACKEND_URL = 'https://quantam-ai.onrender.com'
+      // ---- Supabase (optional) ----
+      const SUPABASE_URL = 'https://your-project.supabase.co';  // <-- REPLACE if using Supabase
+      const SUPABASE_ANON_KEY = 'your-anon-key';
       let supabase = null;
       try {
         if (!SUPABASE_URL.includes('your-project')) {
@@ -215,11 +124,9 @@
         } else {
           console.warn('Supabase not configured, using localStorage fallback.');
         }
-      } catch (e) {
-        console.warn('Supabase init failed, using localStorage fallback.');
-      }
+      } catch (e) { console.warn('Supabase init failed, using localStorage fallback.'); }
 
-      // ---------- MODEL LIST with intelligence stars (1-5) ----------
+      // ---- MODEL LIST (same as before) ----
       const models = [
         { id: 'arcee-ai/trinity-large-preview:free', name: 'Trinity Large', stars: 5 },
         { id: 'stepfun/step-3.5-flash:free', name: 'Step 3.5 Flash', stars: 4 },
@@ -250,114 +157,59 @@
         { id: 'openrouter/free', name: 'OpenRouter Fallback', stars: 3 }
       ];
 
-      // ---------- GLOBAL STATE ----------
-      let currentUser = {
-        id: localStorage.getItem('omniusUserId') || generateUserId(),
-        chats: []
-      };
+      // ---- GLOBAL STATE ----
+      let currentUser = { id: localStorage.getItem('omniusUserId') || generateUserId(), chats: [] };
       let currentChatId = null;
-      let currentPersona = 'omnius'; // 'omnius' or 'prompter'
-      let currentMode = 'pro';       // 'fast', 'pro', 'research'
+      let currentPersona = 'omnius';
+      let currentMode = 'pro';
       let extendedThinking = false;
       let codeMode = false;
       let darkMode = localStorage.getItem('darkMode') === 'true';
       let selectedModel = localStorage.getItem('selectedModel') || models[0].id;
       let globalSystemPrompt = localStorage.getItem('globalSystemPrompt') || '';
 
-      // Helper: generate random user ID
-      function generateUserId() {
-        return 'user_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      }
+      function generateUserId() { return 'user_' + Math.random().toString(36).substring(2,15) + Date.now().toString(36); }
       localStorage.setItem('omniusUserId', currentUser.id);
       document.getElementById('userIdDisplay').innerText = currentUser.id.slice(0,8) + '...';
-
-      // Dark mode init
       if (darkMode) document.documentElement.classList.add('dark');
 
-      // ---------- LOAD CHATS ----------
+      // ---- load chats (Supabase or localStorage) ----
       async function loadUserChats() {
         if (supabase) {
-          const { data, error } = await supabase
-            .from('chats')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('updated_at', { ascending: false });
+          const { data, error } = await supabase.from('chats').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
           if (!error && data) {
-            currentUser.chats = data.map(row => ({
-              id: row.id,
-              name: row.name,
-              messages: row.messages || [],
-              createdAt: row.created_at,
-              updatedAt: row.updated_at
-            }));
-          } else {
-            fallbackLoadChats();
-          }
-        } else {
-          fallbackLoadChats();
-        }
+            currentUser.chats = data.map(row => ({ id: row.id, name: row.name, messages: row.messages || [], createdAt: row.created_at, updatedAt: row.updated_at }));
+          } else fallbackLoadChats();
+        } else fallbackLoadChats();
         renderChatHistory();
         if (currentUser.chats.length === 0) createNewChat();
         else loadChat(currentUser.chats[0].id);
       }
-
       function fallbackLoadChats() {
         const stored = localStorage.getItem(`chats_${currentUser.id}`);
-        if (stored) {
-          try {
-            currentUser.chats = JSON.parse(stored);
-          } catch (e) {
-            currentUser.chats = [];
-          }
-        } else {
-          currentUser.chats = [];
-        }
+        try { currentUser.chats = stored ? JSON.parse(stored) : []; } catch { currentUser.chats = []; }
       }
-
       async function saveChats() {
         if (supabase) {
           for (let chat of currentUser.chats) {
-            await supabase
-              .from('chats')
-              .upsert({
-                id: chat.id,
-                user_id: currentUser.id,
-                name: chat.name,
-                messages: chat.messages,
-                updated_at: new Date().toISOString()
-              });
+            await supabase.from('chats').upsert({ id: chat.id, user_id: currentUser.id, name: chat.name, messages: chat.messages, updated_at: new Date().toISOString() });
           }
         }
         localStorage.setItem(`chats_${currentUser.id}`, JSON.stringify(currentUser.chats));
       }
-
       function createNewChat() {
-        const chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-        const newChat = {
-          id: chatId,
-          name: 'New conversation',
-          messages: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        currentUser.chats.unshift(newChat);
-        saveChats();
-        renderChatHistory();
-        loadChat(chatId);
+        const chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2,8);
+        currentUser.chats.unshift({ id: chatId, name: 'New conversation', messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        saveChats(); renderChatHistory(); loadChat(chatId);
       }
-
       function loadChat(chatId) {
         currentChatId = chatId;
         const chat = currentUser.chats.find(c => c.id === chatId);
-        if (chat) {
-          renderMessages(chat.messages);
-        }
-        // highlight active in sidebar
-        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('bg-gray-200', 'dark:bg-gray-700'));
+        if (chat) renderMessages(chat.messages);
+        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('bg-gray-200','dark:bg-gray-700'));
         const activeEl = document.getElementById(`chat-${chatId}`);
-        if (activeEl) activeEl.classList.add('bg-gray-200', 'dark:bg-gray-700');
+        if (activeEl) activeEl.classList.add('bg-gray-200','dark:bg-gray-700');
       }
-
       function renderChatHistory() {
         const container = document.getElementById('chatHistoryList');
         container.innerHTML = '';
@@ -365,32 +217,17 @@
           const div = document.createElement('div');
           div.id = `chat-${chat.id}`;
           div.className = 'chat-item p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center';
-          div.innerHTML = `
-            <span class="truncate">${chat.name}</span>
-            <button class="delete-chat text-red-500 hover:text-red-700" data-id="${chat.id}"><i class="fas fa-trash"></i></button>
-          `;
-          div.addEventListener('click', (e) => {
-            if (e.target.closest('.delete-chat')) return;
-            loadChat(chat.id);
-          });
-          div.querySelector('.delete-chat').addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteChat(chat.id);
-          });
+          div.innerHTML = `<span class="truncate">${chat.name}</span><button class="delete-chat text-red-500 hover:text-red-700" data-id="${chat.id}"><i class="fas fa-trash"></i></button>`;
+          div.addEventListener('click', (e) => { if (!e.target.closest('.delete-chat')) loadChat(chat.id); });
+          div.querySelector('.delete-chat').addEventListener('click', (e) => { e.stopPropagation(); deleteChat(chat.id); });
           container.appendChild(div);
         });
       }
-
       function deleteChat(chatId) {
         currentUser.chats = currentUser.chats.filter(c => c.id !== chatId);
-        if (currentChatId === chatId) {
-          if (currentUser.chats.length > 0) loadChat(currentUser.chats[0].id);
-          else createNewChat();
-        }
-        saveChats();
-        renderChatHistory();
+        if (currentChatId === chatId) currentUser.chats.length > 0 ? loadChat(currentUser.chats[0].id) : createNewChat();
+        saveChats(); renderChatHistory();
       }
-
       function renderMessages(messages) {
         const container = document.getElementById('chatMessages');
         container.innerHTML = '';
@@ -408,81 +245,55 @@
           container.appendChild(messageDiv);
         });
         container.scrollTop = container.scrollHeight;
-        // highlight code blocks
         document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       }
 
-      // ---------- PERSONA SWITCH (mode-locked) ----------
+      // ---- UI event listeners (persona, modes, toggles, dark mode, settings) ----
       document.querySelectorAll('.persona-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
-          btn.classList.add('active', 'bg-indigo-600', 'text-white');
+          document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active','bg-indigo-600','text-white'));
+          btn.classList.add('active','bg-indigo-600','text-white');
           currentPersona = btn.dataset.persona;
         });
       });
-      document.querySelector('[data-persona="omnius"]').classList.add('active', 'bg-indigo-600', 'text-white');
+      document.querySelector('[data-persona="omnius"]').classList.add('active','bg-indigo-600','text-white');
 
-      // ---------- PERFORMANCE MODE SWITCH ----------
       function setMode(mode) {
         currentMode = mode;
         document.querySelectorAll('.mode-btn, .mode-btn-mobile').forEach(b => {
-          b.classList.remove('active-mode', 'bg-indigo-600', 'text-white');
-          if (b.dataset.mode === mode) {
-            b.classList.add('active-mode', 'bg-indigo-600', 'text-white');
-          }
+          b.classList.remove('active-mode','bg-indigo-600','text-white');
+          if (b.dataset.mode === mode) b.classList.add('active-mode','bg-indigo-600','text-white');
         });
         document.getElementById('modeIndicator').innerText = mode.toUpperCase();
       }
-      document.querySelectorAll('.mode-btn, .mode-btn-mobile').forEach(btn => {
-        btn.addEventListener('click', () => setMode(btn.dataset.mode));
-      });
+      document.querySelectorAll('.mode-btn, .mode-btn-mobile').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
       setMode('pro');
 
-      // ---------- TOGGLES ----------
-      document.getElementById('extendedToggle').addEventListener('click', (e) => {
-        extendedThinking = !extendedThinking;
-        e.currentTarget.classList.toggle('text-indigo-600', extendedThinking);
-      });
-      document.getElementById('codeToggle').addEventListener('click', (e) => {
-        codeMode = !codeMode;
-        e.currentTarget.classList.toggle('text-indigo-600', codeMode);
-      });
+      document.getElementById('extendedToggle').addEventListener('click', (e) => { extendedThinking = !extendedThinking; e.currentTarget.classList.toggle('text-indigo-600', extendedThinking); });
+      document.getElementById('codeToggle').addEventListener('click', (e) => { codeMode = !codeMode; e.currentTarget.classList.toggle('text-indigo-600', codeMode); });
+      document.getElementById('darkModeToggle').addEventListener('click', () => { darkMode = !darkMode; document.documentElement.classList.toggle('dark', darkMode); localStorage.setItem('darkMode', darkMode); });
 
-      // ---------- DARK MODE ----------
-      document.getElementById('darkModeToggle').addEventListener('click', () => {
-        darkMode = !darkMode;
-        document.documentElement.classList.toggle('dark', darkMode);
-        localStorage.setItem('darkMode', darkMode);
-      });
-
-      // ---------- SETTINGS MODAL ----------
+      // settings modal
       const settingsModal = document.getElementById('settingsModal');
       document.getElementById('settingsBtn').addEventListener('click', () => {
-        // populate model select
         const select = document.getElementById('modelSelect');
         select.innerHTML = '';
         models.forEach(m => {
-          const option = document.createElement('option');
-          option.value = m.id;
-          option.textContent = `${m.name} (${'★'.repeat(m.stars)})`;
-          if (m.id === selectedModel) option.selected = true;
-          select.appendChild(option);
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = `${m.name} (${'★'.repeat(m.stars)})`;
+          if (m.id === selectedModel) opt.selected = true;
+          select.appendChild(opt);
         });
         updateStars(selectedModel);
         document.getElementById('globalSystemPrompt').value = globalSystemPrompt;
         settingsModal.classList.remove('hidden');
       });
-      document.getElementById('closeSettings').addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
-      });
-      document.getElementById('modelSelect').addEventListener('change', (e) => {
-        updateStars(e.target.value);
-      });
+      document.getElementById('closeSettings').addEventListener('click', () => settingsModal.classList.add('hidden'));
+      document.getElementById('modelSelect').addEventListener('change', (e) => updateStars(e.target.value));
       function updateStars(modelId) {
         const model = models.find(m => m.id === modelId);
-        if (model) {
-          document.getElementById('modelStars').innerHTML = '★'.repeat(model.stars) + '☆'.repeat(5-model.stars);
-        }
+        if (model) document.getElementById('modelStars').innerHTML = '★'.repeat(model.stars) + '☆'.repeat(5-model.stars);
       }
       document.getElementById('saveSettings').addEventListener('click', () => {
         selectedModel = document.getElementById('modelSelect').value;
@@ -493,14 +304,9 @@
         settingsModal.classList.add('hidden');
       });
 
-      // ---------- SEND MESSAGE (via backend proxy) ----------
+      // ---- send message via backend ----
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
-      document.getElementById('userInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      });
+      document.getElementById('userInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
       async function sendMessage() {
         const input = document.getElementById('userInput');
@@ -508,14 +314,12 @@
         if (!text) return;
         input.value = '';
 
-        // add user message to current chat
         const chat = currentUser.chats.find(c => c.id === currentChatId);
         if (!chat) return;
         chat.messages.push({ role: 'user', content: text });
         renderMessages(chat.messages);
         saveChats();
 
-        // show typing indicator
         const typingId = 'typing-' + Date.now();
         const typingDiv = document.createElement('div');
         typingDiv.id = typingId;
@@ -524,7 +328,6 @@
         document.getElementById('chatMessages').appendChild(typingDiv);
         document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
 
-        // build system prompt based on persona and mode
         let systemContent = '';
         if (currentPersona === 'omnius') {
           systemContent = `You are Omnius AI, a general assistant. Current mode: ${currentMode}. ${extendedThinking ? 'Use extended thinking.' : ''} ${codeMode ? 'Prioritize code.' : ''}`;
@@ -535,32 +338,23 @@
 
         const messagesForAPI = [
           { role: 'system', content: systemContent },
-          ...chat.messages.slice(-10).map(m => ({ role: m.role, content: m.content })) // last 10 for context
+          ...chat.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
         ];
 
         try {
-          // Send request to backend (which holds the API key securely)
           const response = await fetch(BACKEND_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: selectedModel,
-              messages: messagesForAPI,
-              stream: true
-            })
+            body: JSON.stringify({ model: selectedModel, messages: messagesForAPI, stream: true })
           });
-
-          if (!response.ok) throw new Error('Backend error: ' + response.status);
+          if (!response.ok) throw new Error(`Backend error: ${response.status}`);
 
           const reader = response.body.getReader();
-          const decoder = new TextDecoder('utf-8');
+          const decoder = new TextDecoder();
           let assistantMessage = '';
           let nodeFlow = '';
 
-          // remove typing indicator
           document.getElementById(typingId)?.remove();
-
-          // create assistant message container
           const msgDiv = document.createElement('div');
           msgDiv.className = 'message text-left mb-4';
           const bubble = document.createElement('div');
@@ -590,33 +384,28 @@
             }
           }
 
-          // after main response, if in pro/research, also fetch reasoning flow (simulate node flow)
           if (currentMode !== 'fast') {
-            // we'll ask for a step-by-step reasoning as a separate call
-            const reasoningMessages = [
-              { role: 'system', content: 'Provide a step-by-step reasoning for the last answer, formatted as a node flow like:\n[START] ...\n  → [Node 1] ...\n    → [Node 1a] ...' },
-              { role: 'user', content: `Question: ${text}\nAnswer: ${assistantMessage}` }
-            ];
             const reasoningRes = await fetch(BACKEND_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: selectedModel,
-                messages: reasoningMessages,
-                stream: false  // non‑streaming for simplicity
+                messages: [
+                  { role: 'system', content: 'Provide a step-by-step reasoning for the last answer, formatted as a node flow like:\n[START] ...\n  → [Node 1] ...\n    → [Node 1a] ...' },
+                  { role: 'user', content: `Question: ${text}\nAnswer: ${assistantMessage}` }
+                ],
+                stream: false
               })
             });
             const reasoningData = await reasoningRes.json();
             nodeFlow = reasoningData.choices?.[0]?.message?.content || 'Unable to generate reasoning.';
-            // append node flow to message
             const flowDiv = document.createElement('div');
             flowDiv.className = 'node-flow mt-2';
             flowDiv.innerHTML = marked.parse(nodeFlow);
             bubble.appendChild(flowDiv);
           }
 
-          // save to chat
-          chat.messages.push({ role: 'assistant', content: assistantMessage, nodeFlow: nodeFlow });
+          chat.messages.push({ role: 'assistant', content: assistantMessage, nodeFlow });
           saveChats();
 
         } catch (error) {
@@ -628,20 +417,14 @@
         }
       }
 
-      // ---------- INIT ----------
+      // ---- init ----
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       loadUserChats();
       document.getElementById('modelIndicator').innerText = models.find(m => m.id === selectedModel)?.name || selectedModel;
-
-      // sidebar toggle
-      document.getElementById('sidebarToggle').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('sidebar-closed');
-      });
-
-      // new chat
+      document.getElementById('sidebarToggle').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('sidebar-closed'));
       document.getElementById('newChatBtn').addEventListener('click', createNewChat);
     })();
   </script>
 </body>
-    </html>
+                                                                                                                                                                                 </html>
