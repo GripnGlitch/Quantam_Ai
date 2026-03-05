@@ -26,7 +26,7 @@ app.post('/api/chat', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': 'https://your-frontend-domain.com', // Replace after frontend deployed
+        'HTTP-Referer': 'https://gripnglitch.github.io/Quantam_Ai/', // Replace after frontend deployed
         'X-Title': 'Omnius AI'
       },
       body: JSON.stringify({
