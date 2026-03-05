@@ -56,7 +56,7 @@
         <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Omnius AI</h1>
       </div>
       <div class="flex items-center gap-2">
-        <!-- Model badge (visible on all screens) -->
+        <!-- Model badge (visible on desktop) -->
         <span id="headerModelBadge" class="model-badge hidden md:inline-block">Trinity Large</span>
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1 text-sm">
           <button id="personaOmnius" class="px-3 py-1 rounded-full font-semibold transition-colors persona-btn active" data-persona="omnius">Omnius</button>
@@ -135,7 +135,7 @@
             <span id="modelStars" class="text-amber-500">★★★★★</span>
           </div>
         </div>
-        <!-- System prompt removed per user request -->
+        <!-- System prompt removed as requested -->
         <button id="saveSettings" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg">Save</button>
       </div>
     </div>
@@ -143,7 +143,7 @@
 
   <script>
     (function() {
-      // ---- CONFIG ----
+      // ---- CONFIG (already replaced) ----
       const BACKEND_URL = 'https://quantam-ai-1am2.onrender.com/api/chat';
       const SUPABASE_URL = 'https://uvjasmmokcjmpawrnzoz.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2amFzbW1va2NqbXBhd3Juem96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzM4MjAsImV4cCI6MjA4Nzc0OTgyMH0.aS2qgAOL1OwVVr-7ok2z0M3DiaDK-rCdjLp-1moXFqA';
@@ -209,7 +209,6 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
       let codeMode = false;
       let darkMode = localStorage.getItem('darkMode') === 'true';
       let selectedModel = localStorage.getItem('selectedModel') || models[0].id;
-      // No user‑editable system prompt – we use the hardcoded OMNINUS_SYSTEM_PROMPT
 
       function generateUserId() {
         return 'user_' + Math.random().toString(36).substring(2,15) + Date.now().toString(36);
@@ -588,4 +587,4 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 </body>
-  </html>
+        </html>
