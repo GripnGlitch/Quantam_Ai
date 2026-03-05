@@ -1,4 +1,4 @@
-import express from 'express';
+  import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 
@@ -9,11 +9,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors()); // Allow frontend requests
 app.use(express.json());
 
-// OpenRouter endpoint
+// OpenRouter endpoint – read API key from environment variable
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 if (!OPENROUTER_API_KEY) {
-  console.error('Missing OPENROUTER_API_KEY environment variable');
-  process.exit(1);
+  console.error('❌ OPENROUTER_API_KEY environment variable is not set!');
+  process.exit(1); // Exit if key missing – Render will mark deployment as failed
+} else {
+  console.log(`✅ OPENROUTER_API_KEY loaded (length: ${OPENROUTER_API_KEY.length})`);
 }
 
 // Proxy endpoint
@@ -26,7 +28,8 @@ app.post('/api/chat', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': 'https://gripnglitch.github.io/Quantam_Ai/', // Replace after frontend deployed
+        // Your GitHub Pages URL – already replaced
+        'HTTP-Referer': 'https://gripnglitch.github.io/Quantam_Ai/',
         'X-Title': 'Omnius AI'
       },
       body: JSON.stringify({
@@ -71,6 +74,11 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Optional health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
+
 app.listen(PORT, () => {
-  console.log(`Omnius backend running on port ${PORT}`);
+  console.log(`🚀 Omnius backend running on port ${PORT}`);
 });
