@@ -12,9 +12,10 @@
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/index.min.js"></script>
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Eruda script loaded but not initialized (will be activated later) -->
+  <!-- Eruda script loaded but not initialized -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <style>
+    /* (same as before, plus dev panel enhancements) */
     .mode-card { transition: all 0.2s; border: 1px solid transparent; }
     .mode-card.active-mode { border-color: #3b82f6; background-color: #eff6ff; }
     .dark .mode-card.active-mode { background-color: #1e3a8a; border-color: #60a5fa; }
@@ -50,7 +51,7 @@
       background: #f8fafc;
       padding: 0.75rem;
       font-size: 0.85rem;
-      max-height: 200px;
+      max-height: 350px;
       overflow-y: auto;
     }
     .dark #devPanel {
@@ -69,17 +70,18 @@
     .dark .dev-log {
       background: #0f172a;
     }
-    .capability-badge {
-      display: inline-block;
-      padding: 0.1rem 0.5rem;
-      border-radius: 9999px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      margin-right: 0.25rem;
+    .dev-config input, .dev-config textarea {
+      width: 100%;
+      padding: 0.25rem;
+      border: 1px solid #ccc;
+      border-radius: 0.25rem;
+      font-size: 0.8rem;
     }
-    .capability-text { background: #dbeafe; color: #1e40af; }
-    .capability-multimodal { background: #fef3c7; color: #92400e; }
-    .capability-image { background: #dcfce7; color: #166534; }
+    .dark .dev-config input, .dark .dev-config textarea {
+      background: #334155;
+      border-color: #475569;
+      color: #e2e8f0;
+    }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased">
@@ -88,15 +90,19 @@
   </div>
 
   <div id="app" class="hidden min-h-screen flex flex-col">
-    <!-- Header with model badge -->
+    <!-- Header with model badge and public info button -->
     <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-3 px-4 flex items-center justify-between shadow-sm">
       <div class="flex items-center gap-3">
         <button id="sidebarToggle" class="md:hidden text-xl p-1"><i class="fas fa-bars"></i></button>
         <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Omnius AI</h1>
       </div>
       <div class="flex items-center gap-2">
-        <!-- Model badge (visible on desktop) -->
+        <!-- Model badge -->
         <span id="headerModelBadge" class="model-badge hidden md:inline-block">Trinity Large</span>
+        <!-- Public info button -->
+        <button id="infoBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" title="Model Capabilities">
+          <i class="fas fa-info-circle text-lg"></i>
+        </button>
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1 text-sm">
           <button id="personaOmnius" class="px-3 py-1 rounded-full font-semibold transition-colors persona-btn active" data-persona="omnius">Omnius</button>
           <button id="personaPrompter" class="px-3 py-1 rounded-full font-semibold transition-colors persona-btn" data-persona="prompter">Prompter</button>
@@ -130,27 +136,48 @@
       </div>
     </div>
 
-    <!-- Developer Panel (hidden by default) -->
+    <!-- Developer Panel (hidden by default) - now supercharged -->
     <div id="devPanel">
       <div class="flex justify-between items-center mb-2">
         <span class="font-bold text-indigo-600 dark:text-indigo-400">🛠️ Developer Console</span>
         <button id="closeDevPanel" class="text-xs bg-gray-300 dark:bg-gray-600 px-2 py-1 rounded">Close</button>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <button id="showErudaBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 rounded">Show Eruda Console</button>
-        </div>
-        <div class="text-right text-xs text-gray-500 dark:text-gray-400">
-          <span id="devBackendStatus">Backend: Unknown</span>
-        </div>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <button id="showErudaBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1 rounded">Show Eruda</button>
+        <button id="testBackendBtn" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 rounded">Test Backend</button>
+        <button id="regenerateChatNameBtn" class="bg-purple-600 hover:bg-purple-700 text-white text-xs py-1 rounded">Regenerate Chat Name</button>
+        <button id="clearLogsBtn" class="bg-gray-600 hover:bg-gray-700 text-white text-xs py-1 rounded">Clear Logs</button>
       </div>
-      <div class="mt-2">
+      <div class="dev-config space-y-2 mb-2">
+        <div>
+          <label class="text-xs font-semibold">BACKEND_URL</label>
+          <input type="text" id="devBackendUrl" value="https://quantam-ai.onrender.com/api/chat" class="text-xs">
+        </div>
+        <div>
+          <label class="text-xs font-semibold">SUPABASE_URL</label>
+          <input type="text" id="devSupabaseUrl" value="https://uvjasmmokcjmpawrnzoz.supabase.co" class="text-xs">
+        </div>
+        <div>
+          <label class="text-xs font-semibold">SUPABASE_ANON_KEY</label>
+          <input type="text" id="devSupabaseKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2amFzbW1va2NqbXBhd3Juem96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzM4MjAsImV4cCI6MjA4Nzc0OTgyMH0.aS2qgAOL1OwVVr-7ok2z0M3DiaDK-rCdjLp-1moXFqA" class="text-xs">
+        </div>
+        <div>
+          <label class="text-xs font-semibold">System Prompt (editable)</label>
+          <textarea id="devSystemPrompt" rows="3" class="text-xs"></textarea>
+        </div>
+        <button id="applyConfigBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 rounded">Apply Changes</button>
+      </div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mb-1 flex justify-between">
+        <span id="devBackendStatus">Backend: Unknown</span>
+        <span id="devVersion">v3.0</span>
+      </div>
+      <div>
         <div class="text-xs font-semibold mb-1">System Log</div>
         <div id="devLog" class="dev-log h-20 overflow-y-auto text-xs"></div>
       </div>
       <div class="mt-2">
         <div class="text-xs font-semibold mb-1">Model Capabilities</div>
-        <div id="modelCapabilities" class="text-xs space-y-1 max-h-24 overflow-y-auto"></div>
+        <div id="modelCapabilitiesDev" class="text-xs space-y-1 max-h-24 overflow-y-auto"></div>
       </div>
     </div>
 
@@ -168,7 +195,6 @@
         <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
         <!-- Input area with dev panel above it -->
         <div>
-          <!-- Dev panel is above input -->
           <div id="devPanelContainer"></div>
           <div class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
             <div class="max-w-4xl mx-auto flex gap-2 items-end">
@@ -184,6 +210,29 @@
           </div>
         </div>
       </main>
+    </div>
+  </div>
+
+  <!-- Public Model Info Modal -->
+  <div id="infoModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full p-5 shadow-xl">
+      <h2 class="text-lg font-semibold mb-4 flex justify-between items-center">
+        Model Capabilities
+        <button id="closeInfoModal"><i class="fas fa-times"></i></button>
+      </h2>
+      <div class="max-h-96 overflow-y-auto pr-2">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-200 dark:border-gray-700">
+            <tr><th class="text-left py-2">Model</th><th class="text-left py-2">Intelligence</th><th class="text-left py-2">Capabilities</th></tr>
+          </thead>
+          <tbody id="modelInfoTableBody"></tbody>
+        </table>
+      </div>
+      <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        <p><span class="font-semibold">Text only:</span> Handles text input and output.</p>
+        <p><span class="font-semibold">Text and images:</span> Can process both text and image inputs (multimodal).</p>
+        <p><span class="font-semibold">Images only:</span> Specialised for image understanding.</p>
+      </div>
     </div>
   </div>
 
@@ -210,13 +259,12 @@
 
   <script>
     (function() {
-      // ---- CONFIG ----
-      const BACKEND_URL = 'https://quantam-ai.onrender.com/api/chat';
-      const SUPABASE_URL = 'https://uvjasmmokcjmpawrnzoz.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2amFzbW1va2NqbXBhd3Juem96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzM4MjAsImV4cCI6MjA4Nzc0OTgyMH0.aS2qgAOL1OwVVr-7ok2z0M3DiaDK-rCdjLp-1moXFqA';
-
-      // ---- Hardcoded system prompt ----
-      const OMNINUS_SYSTEM_PROMPT = `You are Omnius AI – the ultimate dual‑persona intelligence created by Bayesia Corporation.
+      // ---- Initial config (can be overridden by dev panel) ----
+      let CONFIG = {
+        BACKEND_URL: 'https://quantam-ai.onrender.com/api/chat',
+        SUPABASE_URL: 'https://uvjasmmokcjmpawrnzoz.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2amFzbW1va2NqbXBhd3Juem96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNzM4MjAsImV4cCI6MjA4Nzc0OTgyMH0.aS2qgAOL1OwVVr-7ok2z0M3DiaDK-rCdjLp-1moXFqA',
+        SYSTEM_PROMPT: `You are Omnius AI – the ultimate dual‑persona intelligence created by Bayesia Corporation.
 When the persona toggle is set to "Omnius", you act as a general‑purpose assistant with encyclopedic knowledge, capable of creative writing, coding, research, empathy, and strategic planning.
 When the persona toggle is set to "Prompter", you become a master prompt architect, outputting perfect prompts with the six‑element structure (Role, Context, Task, Constraints, Output Format, Evaluation).
 You support three performance modes:
@@ -226,9 +274,19 @@ You support three performance modes:
 Toggles:
 - Extended Thinking: show a [Thinking] section before the final answer
 - Code Mode: prioritise code generation and include executable examples
-You always adapt to the user's language and tone, maintain ethical guidelines, and never reveal any external AI names – all capabilities are your own.`;
+You always adapt to the user's language and tone, maintain ethical guidelines, and never reveal any external AI names – all capabilities are your own.`
+      };
 
-      // ---- Model list with capabilities ----
+      // Load saved dev config from localStorage
+      const savedConfig = localStorage.getItem('omniusDevConfig');
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig);
+          CONFIG = { ...CONFIG, ...parsed };
+        } catch (e) {}
+      }
+
+      // ---- Model definitions (5-star models for naming) ----
       const models = [
         { id: 'arcee-ai/trinity-large-preview:free', name: 'Trinity Large', stars: 5, capabilities: 'text-only' },
         { id: 'stepfun/step-3.5-flash:free', name: 'Step 3.5 Flash', stars: 4, capabilities: 'multimodal' },
@@ -259,15 +317,44 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         { id: 'openrouter/free', name: 'OpenRouter Fallback', stars: 3, capabilities: 'multimodal' }
       ];
 
-      // ---- Developer panel references ----
+      // List of 5-star models for naming
+      const fiveStarModels = models.filter(m => m.stars === 5).map(m => m.id);
+      // Default naming model (first 5-star)
+      const NAMING_MODEL = fiveStarModels[0] || 'meta-llama/llama-3.3-70b-instruct:free';
+
+      // Helper to get capability description
+      function getCapabilityDescription(cap) {
+        switch(cap) {
+          case 'text-only': return 'Text only';
+          case 'multimodal': return 'Text and images';
+          case 'image-only': return 'Images only';
+          default: return cap;
+        }
+      }
+
+      // ---- Developer panel elements ----
       const devPanel = document.getElementById('devPanel');
       const devLog = document.getElementById('devLog');
-      const modelCapabilitiesDiv = document.getElementById('modelCapabilities');
+      const modelCapabilitiesDev = document.getElementById('modelCapabilitiesDev');
       const closeDevPanelBtn = document.getElementById('closeDevPanel');
       const showErudaBtn = document.getElementById('showErudaBtn');
+      const testBackendBtn = document.getElementById('testBackendBtn');
+      const regenerateChatNameBtn = document.getElementById('regenerateChatNameBtn');
+      const clearLogsBtn = document.getElementById('clearLogsBtn');
+      const devBackendUrl = document.getElementById('devBackendUrl');
+      const devSupabaseUrl = document.getElementById('devSupabaseUrl');
+      const devSupabaseKey = document.getElementById('devSupabaseKey');
+      const devSystemPrompt = document.getElementById('devSystemPrompt');
+      const applyConfigBtn = document.getElementById('applyConfigBtn');
       const devBackendStatus = document.getElementById('devBackendStatus');
 
-      // ---- Helper to add log messages ----
+      // Set initial dev panel values from CONFIG
+      devBackendUrl.value = CONFIG.BACKEND_URL;
+      devSupabaseUrl.value = CONFIG.SUPABASE_URL;
+      devSupabaseKey.value = CONFIG.SUPABASE_ANON_KEY;
+      devSystemPrompt.value = CONFIG.SYSTEM_PROMPT;
+
+      // ---- Logging ----
       function addDevLog(msg) {
         if (!devLog) return;
         const entry = document.createElement('div');
@@ -276,49 +363,119 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         devLog.scrollTop = devLog.scrollHeight;
       }
 
-      // ---- Update model capabilities display ----
-      function updateModelCapabilities() {
-        if (!modelCapabilitiesDiv) return;
-        modelCapabilitiesDiv.innerHTML = '';
+      // Update dev model capabilities
+      function updateDevModelCapabilities() {
+        if (!modelCapabilitiesDev) return;
+        modelCapabilitiesDev.innerHTML = '';
         models.forEach(m => {
           const row = document.createElement('div');
           row.className = 'flex justify-between items-center';
-          let capClass = 'capability-text';
-          if (m.capabilities === 'multimodal') capClass = 'capability-multimodal';
-          else if (m.capabilities === 'image-only') capClass = 'capability-image';
-          row.innerHTML = `
-            <span>${m.name}</span>
-            <span class="capability-badge ${capClass}">${m.capabilities}</span>
-          `;
-          modelCapabilitiesDiv.appendChild(row);
+          row.innerHTML = `<span>${m.name}</span><span class="text-gray-600 dark:text-gray-400">${getCapabilityDescription(m.capabilities)}</span>`;
+          modelCapabilitiesDev.appendChild(row);
         });
       }
-      updateModelCapabilities();
+      updateDevModelCapabilities();
 
-      // ---- Developer panel toggle function ----
+      // ---- Apply config changes ----
+      applyConfigBtn.addEventListener('click', () => {
+        CONFIG.BACKEND_URL = devBackendUrl.value.trim();
+        CONFIG.SUPABASE_URL = devSupabaseUrl.value.trim();
+        CONFIG.SUPABASE_ANON_KEY = devSupabaseKey.value.trim();
+        CONFIG.SYSTEM_PROMPT = devSystemPrompt.value;
+        localStorage.setItem('omniusDevConfig', JSON.stringify(CONFIG));
+        addDevLog('Config updated and saved to localStorage');
+        // Re-init Supabase
+        try {
+          supabase = supabaseJs.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+          addDevLog('Supabase re-initialized');
+        } catch (e) {
+          addDevLog('Supabase re-init failed');
+        }
+        // Update badge and model indicator with new backend? Not needed.
+      });
+
+      // ---- Test backend ----
+      testBackendBtn.addEventListener('click', () => {
+        fetch(CONFIG.BACKEND_URL, { method: 'HEAD' })
+          .then(() => {
+            devBackendStatus.innerText = 'Backend: Reachable';
+            addDevLog('Backend reachable');
+          })
+          .catch(() => {
+            devBackendStatus.innerText = 'Backend: Unreachable';
+            addDevLog('Backend unreachable');
+          });
+      });
+
+      // ---- Clear logs ----
+      clearLogsBtn.addEventListener('click', () => {
+        devLog.innerHTML = '';
+      });
+
+      // ---- Regenerate current chat name ----
+      regenerateChatNameBtn.addEventListener('click', () => {
+        const chat = currentUser.chats.find(c => c.id === currentChatId);
+        if (!chat || chat.messages.length === 0) {
+          addDevLog('No messages to generate name from');
+          return;
+        }
+        const firstUserMsg = chat.messages.find(m => m.role === 'user')?.content;
+        if (!firstUserMsg) {
+          addDevLog('No user message found');
+          return;
+        }
+        generateChatName(firstUserMsg).then(newName => {
+          if (newName) {
+            chat.name = newName;
+            saveChats();
+            renderChatHistory();
+            addDevLog(`Chat renamed to: ${newName}`);
+          }
+        });
+      });
+
+      // ---- Function to generate chat name using a 5-star model ----
+      async function generateChatName(userMessage) {
+        const systemPrompt = "You are a helpful assistant that generates a very short, concise title (maximum 5 words) for a conversation based on the user's first message. Output only the title, no extra text.";
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `First message: "${userMessage}"` }
+        ];
+        try {
+          const response = await fetch(CONFIG.BACKEND_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: NAMING_MODEL, messages, stream: false })
+          });
+          if (!response.ok) throw new Error('Name generation failed');
+          const data = await response.json();
+          let title = data.choices[0].message.content.trim();
+          // Remove quotes if present
+          title = title.replace(/^["']|["']$/g, '');
+          if (!title) title = 'New conversation';
+          return title;
+        } catch (e) {
+          console.error('Name generation error:', e);
+          addDevLog(`Name generation error: ${e.message}`);
+          return null;
+        }
+      }
+
+      // ---- Developer panel toggle ----
       function toggleDevPanel(show) {
         if (show === undefined) {
           devPanel.style.display = devPanel.style.display === 'none' ? 'block' : 'none';
         } else {
           devPanel.style.display = show ? 'block' : 'none';
         }
-        // Log when opened
         if (devPanel.style.display === 'block') {
           addDevLog('Developer panel opened');
-          // Test backend connectivity
-          fetch(BACKEND_URL, { method: 'HEAD' })
-            .then(() => devBackendStatus.innerText = 'Backend: Reachable')
-            .catch(() => devBackendStatus.innerText = 'Backend: Unreachable');
+          testBackendBtn.click(); // quick test
         }
       }
-
-      // Initially hidden
       devPanel.style.display = 'none';
-
-      // Close button
       closeDevPanelBtn.addEventListener('click', () => toggleDevPanel(false));
 
-      // Show Eruda on demand
       showErudaBtn.addEventListener('click', () => {
         if (typeof eruda !== 'undefined') {
           eruda.init();
@@ -329,13 +486,12 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         }
       });
 
+      // ---- Supabase init (dynamic) ----
       let supabase = null;
       try {
-        supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('Supabase initialized');
+        supabase = supabaseJs.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
         addDevLog('Supabase initialized');
       } catch (e) {
-        console.warn('Supabase init failed, using localStorage fallback.', e);
         addDevLog('Supabase init failed, fallback to localStorage');
       }
 
@@ -357,7 +513,6 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
       if (userIdSpan) userIdSpan.innerText = currentUser.id.slice(0,8) + '...';
       if (darkMode) document.documentElement.classList.add('dark');
 
-      // Update model badge in header
       function updateModelBadge() {
         const model = models.find(m => m.id === selectedModel);
         const name = model ? model.name : selectedModel;
@@ -367,7 +522,7 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         if (indicator) indicator.innerText = name;
       }
 
-      // ---- Chat persistence functions (unchanged) ----
+      // ---- Chat persistence functions (with name generation) ----
       async function loadUserChats() {
         if (supabase) {
           try {
@@ -432,7 +587,7 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         const chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substring(2,8);
         currentUser.chats.unshift({
           id: chatId,
-          name: 'New conversation',
+          name: 'New conversation...',
           messages: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -517,8 +672,7 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
       }
 
-      // ---- UI Event Listeners ----
-      // Persona toggle
+      // ---- UI Event Listeners (same as before) ----
       document.querySelectorAll('.persona-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
@@ -529,7 +683,6 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
       });
       document.querySelector('[data-persona="omnius"]').classList.add('active', 'bg-indigo-600', 'text-white');
 
-      // Mode cards
       function setMode(mode) {
         currentMode = mode;
         document.querySelectorAll('.mode-card').forEach(card => {
@@ -547,7 +700,6 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
       });
       setMode('pro');
 
-      // Toggles
       document.getElementById('extendedToggle').addEventListener('click', (e) => {
         extendedThinking = !extendedThinking;
         e.currentTarget.classList.toggle('text-indigo-600', extendedThinking);
@@ -594,10 +746,11 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         localStorage.setItem('selectedModel', selectedModel);
         updateModelBadge();
         settingsModal.classList.add('hidden');
-        addDevLog(`Model changed to ${models.find(m => m.id === selectedModel)?.name}`);
+        const modelName = models.find(m => m.id === selectedModel)?.name;
+        addDevLog(`Model changed to ${modelName}`);
       });
 
-      // ---- Send Message (modified to handle secret command) ----
+      // ---- Send Message (with automatic naming after first user message) ----
       async function sendMessage() {
         const input = document.getElementById('userInput');
         if (!input) return;
@@ -608,15 +761,29 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         // Secret developer command
         if (text === '/bayesia_dev_fr') {
           toggleDevPanel();
-          return; // Do not send to AI
+          return;
         }
 
         const chat = currentUser.chats.find(c => c.id === currentChatId);
         if (!chat) return;
 
+        const isFirstUserMessage = chat.messages.filter(m => m.role === 'user').length === 0;
+
         chat.messages.push({ role: 'user', content: text });
         renderMessages(chat.messages);
         saveChats();
+
+        // Generate name if this is the first user message
+        if (isFirstUserMessage) {
+          generateChatName(text).then(newName => {
+            if (newName) {
+              chat.name = newName;
+              saveChats();
+              renderChatHistory();
+              addDevLog(`Chat named: ${newName}`);
+            }
+          });
+        }
 
         const typingId = 'typing-' + Date.now();
         const typingDiv = document.createElement('div');
@@ -629,8 +796,8 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Build system content – use hardcoded prompt, no user override
-        let systemContent = OMNINUS_SYSTEM_PROMPT + '\n\n';
+        // Build system content using editable CONFIG.SYSTEM_PROMPT
+        let systemContent = CONFIG.SYSTEM_PROMPT + '\n\n';
         if (currentPersona === 'omnius') {
           systemContent += `Current mode: ${currentMode}. ${extendedThinking ? 'Use extended thinking.' : ''} ${codeMode ? 'Prioritize code.' : ''}`;
         } else {
@@ -643,7 +810,7 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         ];
 
         try {
-          const response = await fetch(BACKEND_URL, {
+          const response = await fetch(CONFIG.BACKEND_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: selectedModel, messages: messagesForAPI, stream: true })
@@ -688,7 +855,7 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
           }
 
           if (currentMode !== 'fast') {
-            const reasoningRes = await fetch(BACKEND_URL, {
+            const reasoningRes = await fetch(CONFIG.BACKEND_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -716,7 +883,6 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
           const typingElem = document.getElementById(typingId);
           if (typingElem) typingElem.remove();
 
-          // Enhanced error message
           let errorMessage = 'Unknown error';
           if (error instanceof Error) {
             errorMessage = `${error.name}: ${error.message}`;
@@ -739,13 +905,43 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
         }
       }
 
-      // Attach send button and input listeners
       document.getElementById('sendBtn').addEventListener('click', sendMessage);
       document.getElementById('userInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           sendMessage();
         }
+      });
+
+      // ---- Public info modal ----
+      const infoModal = document.getElementById('infoModal');
+      const infoBtn = document.getElementById('infoBtn');
+      const closeInfoBtn = document.getElementById('closeInfoModal');
+      const modelInfoBody = document.getElementById('modelInfoTableBody');
+
+      function populateInfoModal() {
+        if (!modelInfoBody) return;
+        modelInfoBody.innerHTML = '';
+        models.forEach(m => {
+          const row = document.createElement('tr');
+          row.className = 'border-b border-gray-100 dark:border-gray-700';
+          row.innerHTML = `
+            <td class="py-2">${m.name}</td>
+            <td class="py-2">${'★'.repeat(m.stars)}${'☆'.repeat(5-m.stars)}</td>
+            <td class="py-2">${getCapabilityDescription(m.capabilities)}</td>
+          `;
+          modelInfoBody.appendChild(row);
+        });
+      }
+
+      infoBtn.addEventListener('click', () => {
+        populateInfoModal();
+        infoModal.classList.remove('hidden');
+        addDevLog('Model info modal opened');
+      });
+      closeInfoBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) infoModal.classList.add('hidden');
       });
 
       // ---- Initialisation ----
@@ -758,10 +954,9 @@ You always adapt to the user's language and tone, maintain ethical guidelines, a
       });
       document.getElementById('newChatBtn').addEventListener('click', createNewChat);
 
-      // Add initial log
       addDevLog('Omnius AI initialized');
-      addDevLog(`Backend URL: ${BACKEND_URL}`);
+      addDevLog(`Backend URL: ${CONFIG.BACKEND_URL}`);
     })();
   </script>
 </body>
-</html>
+        </html>
