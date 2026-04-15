@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Resistance · The Collective</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.0.0/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js",
+                "firebase/storage": "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js",
+                "firebase/messaging": "https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js",
+                "firebase/analytics": "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js"
+            }
+        }
+    </script>
+    <style>
+        body { background: #000000; color: #e0e0e0; }
+        .glass-panel { background: rgba(10,10,10,0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; }
+        .btn-primary { background: linear-gradient(135deg, #00c6ff, #0072ff); transition: all 0.2s; }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 0 12px #00c6ff; }
+        .role-badge { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 2rem; font-weight: bold; }
+        .role-admin { background: #aa2e78; color: #fff; }
+        .role-moderator { background: #ff4757; color: #000; }
+        .role-leader { background: #ffa502; color: #000; }
+        .role-member { background: #2ed573; color: #000; }
+        .tester-badge { background: #1e40af; color: #fff; margin-left: 0.5rem; padding: 0.1rem 0.4rem; border-radius: 1rem; font-size: 0.65rem; }
+        .message-bubble { max-width: 80%; padding: 0.75rem 1rem; border-radius: 1.5rem; }
+        .message-mine { background: #0a84ff; color: white; margin-left: auto; border-bottom-right-radius: 0; }
+        .message-other { background: #2c2c2e; color: #e0e0e0; margin-right: auto; border-bottom-left-radius: 0; }
+        .thinking-block { background: #1c1c1e; border-left: 3px solid #00c6ff; padding: 0.75rem; margin-bottom: 0.5rem; font-size: 0.85rem; color: #aaa; }
+        .announcement-admin { border-left: 6px solid #aa2e78; background: rgba(170,46,120,0.1); }
+        .announcement-moderator { border-left: 6px solid #ff4757; background: rgba(255,71,87,0.1); }
+        .announcement-leader { border-left: 6px solid #ffa502; background: rgba(255,165,2,0.1); }
+        .deleted-message { font-style: italic; color: #777; background: #1a1a1a; }
+        .reply-thread { margin-left: 2rem; border-left: 2px solid #333; padding-left: 0.75rem; margin-top: 0.5rem; }
+        .reaction-badge { display: inline-flex; align-items: center; background: #2a2a2a; border-radius: 1rem; padding: 0.1rem 0.4rem; margin-right: 0.25rem; font-size: 0.7rem; cursor: pointer; }
+        .reaction-badge:hover { background: #3a3a3a; }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
+        @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
+        emoji-picker { position: absolute; z-index: 1000; background: #1e1e1e; border: 1px solid #333; }
+        .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+        .online { background-color: #2ed573; }
+        .offline { background-color: #777; }
+        .pinned-message { background: #2a2a2a; border-left: 3px solid #fbbf24; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="bg-black text-gray-200 antialiased">
+    <div id="loading" class="fixed inset-0 flex items-center justify-center bg-black z-50">
+        <div class="text-center">
+            <img src="https://i.postimg.cc/cLLwNqXw/resistance-revolution-hand-icon-symbol-260nw-1745903888.jpg" alt="Fist" class="w-24 h-24 mx-auto mb-4 object-contain">
+            <h1 class="text-2xl font-bold tracking-wider text-white uppercase">Resistance</h1>
+        </div>
+    </div>
+
+    <div id="app" class="hidden min-h-screen flex flex-col">
+        <header class="bg-black/90 border-b border-gray-800 py-3 px-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button id="sidebarToggle" class="md:hidden text-xl p-1"><i class="fas fa-bars"></i></button>
+                <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Resistance</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="userRoleBadge" class="role-badge"></span>
+                <div class="relative">
+                    <button id="settingsButton" class="p-1 rounded-full hover:bg-gray-800">
+                        <img src="https://i.postimg.cc/sx319SLS/Windows-Settings-app-icon.png" alt="Settings" class="w-6 h-6">
+                    </button>
+                    <div id="settingsDropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
+                        <button id="devPanelOption" class="block w-full text-left px-4 py-2 hover:bg-gray-800">Developer Panel</button>
+                        <button id="logoutOption" class="block w-full text-left px-4 py-2 hover:bg-gray-800">Log Out</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden relative">
+            <aside id="sidebar" class="sidebar-closed md:translate-x-0 absolute md:static z-20 w-64 bg-black/80 border-r border-gray-800 h-full transition-transform duration-200 flex flex-col">
+                <div class="p-4">
+                    <img src="https://i.postimg.cc/cLLwNqXw/resistance-revolution-hand-icon-symbol-260nw-1745903888.jpg" alt="Group Logo" class="w-16 h-16 rounded-full mx-auto mb-2 object-cover">
+                    <div class="text-green-500 text-xs flex items-center justify-center gap-1 mb-4">
+                        <i class="fas fa-circle text-[8px]"></i>
+                        <span>100% secure</span>
+                    </div>
+                </div>
+                <div class="p-3 border-b border-gray-800">
+                    <button id="newChatBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 px-3 text-sm"><i class="fas fa-plus mr-2"></i>New Chat</button>
+                </div>
+                <nav class="flex-1 p-2 space-y-1">
+                    <button data-view="dashboard" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-tachometer-alt mr-2"></i>Dashboard</button>
+                    <button data-view="profile" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-user mr-2"></i>Profile</button>
+                    <button data-view="globalChat" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-globe mr-2"></i>Global Chat</button>
+                    <button data-view="communityChat" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-users mr-2"></i>My Community Chat</button>
+                    <button data-view="private" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-lock mr-2"></i>Private Messages</button>
+                    <button data-view="announcements" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-bullhorn mr-2"></i>Announcements</button>
+                    <button data-view="calendar" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-calendar-alt mr-2"></i>Events</button>
+                    <button data-view="files" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-paperclip mr-2"></i>Files</button>
+                    <button data-view="omnius" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-robot mr-2"></i>Omnius AI</button>
+                    <button data-view="translator" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-exchange-alt mr-2"></i>Translator</button>
+                    <button data-view="settings" class="nav-btn w-full text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-cog mr-2"></i>Settings</button>
+                </nav>
+                <div class="p-3 border-t border-gray-800 text-xs text-gray-500"><i class="fas fa-user-circle mr-1"></i><span id="userIdDisplay"></span></div>
+            </aside>
+
+            <main class="flex-1 flex flex-col min-w-0 bg-black">
+                <div id="mainContent" class="flex-1 overflow-y-auto p-4"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div id="authScreen" class="min-h-screen flex items-center justify-center p-4 bg-black">
+        <div class="glass-panel w-full max-w-md p-6">
+            <h2 class="text-2xl font-bold mb-4 text-center">Resistance</h2>
+            <div class="flex mb-4 border-b border-gray-700">
+                <button id="authLoginTab" class="flex-1 py-2 text-center font-semibold border-b-2 border-indigo-500">Login</button>
+                <button id="authSignupTab" class="flex-1 py-2 text-center text-gray-400">Sign Up</button>
+            </div>
+            <div id="authLoginPanel">
+                <div class="mb-3"><label class="block text-sm mb-1">Access Code</label><input type="text" id="loginAccessCode" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"></div>
+                <div class="mb-3"><label class="block text-sm mb-1">Member Code</label><input type="password" id="loginMemberCode" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"></div>
+                <button id="loginBtn" class="w-full btn-primary py-2 rounded font-semibold">Login</button>
+                <div class="mt-3 text-center"><button id="forgotCodeBtn" class="text-sm text-indigo-400 hover:underline">Forgot Member Code?</button></div>
+            </div>
+            <div id="authSignupPanel" class="hidden">
+                <div id="signupStep1">
+                    <div class="mb-3"><label class="block text-sm mb-1">Member Code</label><input type="password" id="signupMemberCode" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" placeholder="AMI-021 / OE1-266 / LAO-012 / MEI-021"></div>
+                    <button id="validateMemberCodeBtn" class="w-full btn-primary py-2 rounded font-semibold">Validate & Continue</button>
+                </div>
+                <div id="signupStep2" class="hidden">
+                    <div class="mb-3"><label class="block text-sm mb-1">Choose Community</label>
+                        <select id="communitySelect" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" disabled>
+                            <option value="">-- Select a community --</option>
+                            <option value="VibeVault">Vibe Vault</option>
+                            <option value="Onyx">Onyx</option>
+                            <option value="RTCS">R.T.C.S</option>
+                            <option value="MTT">M.T.T</option>
+                        </select>
+                    </div>
+                    <button id="proceedToProfileBtn" class="w-full btn-primary py-2 rounded font-semibold">Next: Profile</button>
+                    <button id="backToMemberCodeBtn" class="w-full mt-2 text-gray-400 text-sm">Back</button>
+                </div>
+                <div id="signupStep3" class="hidden">
+                    <div class="mb-3"><label class="block text-sm mb-1">Nickname</label><input type="text" id="profileNickname" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" placeholder="How you want to be called"></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Real Name (optional)</label><input type="text" id="profileRealName" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Bio</label><textarea id="profileBio" rows="2" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" placeholder="Tell something about yourself"></textarea></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Birthday</label><input type="date" id="profileBirthday" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Favorite Hobby</label><input type="text" id="profileHobby" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Profile Picture</label><input type="file" id="profilePictureInput" accept="image/*" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"></div>
+                    <div class="mb-3"><label class="block text-sm mb-1">Security Questions (Optional)</label><div id="securityQuestionsContainer" class="space-y-2"></div><button id="addQuestionBtn" class="text-sm text-indigo-400 mt-1">+ Add question</button><p id="securityWarning" class="text-xs text-yellow-500 mt-1 hidden">Without security questions, you cannot recover your account if you lose your Member Code.</p></div>
+                    <button id="finalSignupBtn" class="w-full btn-primary py-2 rounded font-semibold">Create Account</button>
+                    <button id="backToCommunityBtn" class="w-full mt-2 text-gray-400 text-sm">Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="recoveryModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-900 rounded-lg max-w-md w-full p-5">
+            <h3 class="text-lg font-semibold mb-3">Recover Member Code</h3>
+            <div class="mb-3"><label>Access Code</label><input type="text" id="recoveryAccessCode" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"></div>
+            <div id="recoveryQuestionsArea"></div>
+            <button id="recoverySubmitBtn" class="w-full btn-primary py-2 rounded mt-3">Submit</button>
+            <button id="closeRecoveryModal" class="w-full mt-2 text-gray-400">Cancel</button>
+        </div>
+    </div>
+
+    <div id="newGroupModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-900 rounded-lg max-w-md w-full p-5">
+            <h3 class="text-lg font-semibold mb-3">Create New Group</h3>
+            <div class="mb-3"><label>Group Name</label><input type="text" id="groupName" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"></div>
+            <div class="mb-3"><label>Add Members (nickname or real name)</label><input type="text" id="groupMemberSearch" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2" placeholder="Search users"><div id="groupSearchResults" class="mt-2 max-h-32 overflow-y-auto"></div></div>
+            <div class="mb-3"><label>Selected Members</label><div id="selectedMembersList" class="bg-gray-800 rounded p-2 max-h-32 overflow-y-auto"></div></div>
+            <button id="createGroupBtn" class="w-full btn-primary py-2 rounded">Create Group</button>
+            <button id="closeGroupModal" class="w-full mt-2 text-gray-400">Cancel</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, arrayUnion, arrayRemove, serverTimestamp, addDoc, Timestamp } from "firebase/firestore";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+        import { getMessaging, getToken, onMessage } from "firebase/messaging";
+        import { getAnalytics } from "firebase/analytics";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4",
+            authDomain: "resistance-webapp.firebaseapp.com",
+            projectId: "resistance-webapp",
+            storageBucket: "resistance-webapp.firebasestorage.app",
+            messagingSenderId: "985571028111",
+            appId: "1:985571028111:web:53d7a322dd998d7ad814fa"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const messaging = getMessaging(app);
+        const analytics = getAnalytics(app);
+
+        const BACKEND_URL = "https://quantam-ai-1am2.onrender.com";
+        const VAPID_KEY = "bOFgmd3MUt4e-E22Mqzno3wOhQbUng8BOH2cdR_qqC0";
+
+        let currentUser = null;
+        let currentView = "dashboard";
+        let currentPrivateChatWith = null;
+        let currentGroupChatId = null;
+        let currentAIModel = "mistralai/Mistral-7B-Instruct-v0.3";
+        let currentAIMode = "general";
+        let randomMode = false;
+
+        function showToast(msg) { alert(msg); }
+
+        // Authentication functions
+        async function handleLogin() {
+            const accessCode = document.getElementById("loginAccessCode").value.trim();
+            const memberCode = document.getElementById("loginMemberCode").value.trim();
+            if (!accessCode || !memberCode) return showToast("Enter both codes");
+            let role = null;
+            if (memberCode === "AMI-021") role = "admin";
+            else if (memberCode === "OE1-266") role = "moderator";
+            else if (memberCode === "LAO-012") role = "leader";
+            else if (memberCode === "MEI-021") role = "member";
+            else return showToast("Invalid Member Code");
+            const userDoc = await getDoc(doc(db, "users", accessCode));
+            if (!userDoc.exists()) return showToast("Access Code not found");
+            const userData = userDoc.data();
+            if (userData.role !== role) return showToast("Member Code does not match this account");
+            currentUser = { accessCode, ...userData };
+            localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role }));
+            document.getElementById("authScreen").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            document.getElementById("userRoleBadge").innerText = role.toUpperCase();
+            document.getElementById("userIdDisplay").innerText = accessCode;
+            if (role === "admin" && userData.communityId === "VibeVault") {
+                document.getElementById("userRoleBadge").innerText = "LEADER";
+            }
+            await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
+            loadView("dashboard");
+        }
+
+        async function validateMemberCode() {
+            const memberCode = document.getElementById("signupMemberCode").value.trim();
+            let role = null;
+            if (memberCode === "AMI-021") role = "admin";
+            else if (memberCode === "OE1-266") role = "moderator";
+            else if (memberCode === "LAO-012") role = "leader";
+            else if (memberCode === "MEI-021") role = "member";
+            else return showToast("Invalid Member Code");
+            window.validatedRole = role;
+            window.validatedMemberCode = memberCode;
+            const communitySelect = document.getElementById("communitySelect");
+            communitySelect.disabled = false;
+            document.getElementById("signupStep1").classList.add("hidden");
+            document.getElementById("signupStep2").classList.remove("hidden");
+        }
+
+        async function proceedToProfile() {
+            const communityId = document.getElementById("communitySelect").value;
+            if (!communityId) return showToast("Select a community");
+            window.tempCommunityId = communityId;
+            document.getElementById("signupStep2").classList.add("hidden");
+            document.getElementById("signupStep3").classList.remove("hidden");
+        }
+
+        async function finalSignup() {
+            const memberCode = window.validatedMemberCode;
+            const role = window.validatedRole;
+            const communityId = window.tempCommunityId;
+            let accessCode;
+            let exists = true;
+            while (exists) {
+                const len = Math.random() < 0.5 ? 8 : 9;
+                accessCode = Math.floor(Math.random() * Math.pow(10, len)).toString().padStart(len, "0");
+                const docSnap = await getDoc(doc(db, "users", accessCode));
+                exists = docSnap.exists();
+            }
+            const nickname = document.getElementById("profileNickname").value.trim() || "User";
+            const realName = document.getElementById("profileRealName").value.trim();
+            const bio = document.getElementById("profileBio").value.trim();
+            const birthday = document.getElementById("profileBirthday").value;
+            const hobby = document.getElementById("profileHobby").value.trim();
+            const questionsDiv = document.getElementById("securityQuestionsContainer");
+            const questionItems = questionsDiv.querySelectorAll(".question-item");
+            const securityQuestions = [];
+            for (let item of questionItems) {
+                const q = item.querySelector(".q-text").value;
+                const a = item.querySelector(".a-text").value;
+                if (q && a) securityQuestions.push({ question: q, answerHash: btoa(a) });
+            }
+            const userData = {
+                role,
+                communityId,
+                nickname,
+                realName,
+                bio,
+                birthday,
+                hobby,
+                loginHistory: [Date.now()],
+                createdAt: Date.now(),
+                securityQuestions: securityQuestions.length ? securityQuestions : null,
+                online: true,
+                lastSeen: Date.now(),
+                blockedUsers: [],
+                tester: false
+            };
+            await setDoc(doc(db, "users", accessCode), userData);
+            const fileInput = document.getElementById("profilePictureInput");
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const storageRef = ref(storage, `profilePictures/${accessCode}`);
+                await uploadBytes(storageRef, file);
+                const photoURL = await getDownloadURL(storageRef);
+                await updateDoc(doc(db, "users", accessCode), { photoURL });
+                userData.photoURL = photoURL;
+            }
+            showToast(`Account created! Your Access Code is ${accessCode}. Save it securely.`);
+            currentUser = { accessCode, ...userData };
+            localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role }));
+            document.getElementById("authScreen").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            document.getElementById("userRoleBadge").innerText = role.toUpperCase();
+            document.getElementById("userIdDisplay").innerText = accessCode;
+            if (role === "admin" && communityId === "VibeVault") {
+                document.getElementById("userRoleBadge").innerText = "LEADER";
+            }
+            loadView("dashboard");
+        }
+
+        function backToMemberCode() {
+            document.getElementById("signupStep2").classList.add("hidden");
+            document.getElementById("signupStep1").classList.remove("hidden");
+            document.getElementById("communitySelect").disabled = true;
+            document.getElementById("communitySelect").value = "";
+        }
+        function backToCommunity() {
+            document.getElementById("signupStep3").classList.add("hidden");
+            document.getElementById("signupStep2").classList.remove("hidden");
+        }
+
+        async function loadView(view) {
+            currentView = view;
+            const container = document.getElementById("mainContent");
+            if (view === "dashboard") {
+                container.innerHTML = `<div class="glass-panel p-6"><h2 class="text-xl font-bold mb-4">Dashboard</h2><p>Welcome to Resistance. Use the sidebar to navigate.</p></div>`;
+            } else if (view === "profile") {
+                const userDoc = await getDoc(doc(db, "users", currentUser.accessCode));
+                const userData = userDoc.data();
+                const testerBadge = userData.tester ? '<span class="tester-badge">🧪 Tester</span>' : '';
+                container.innerHTML = `
+                    <div class="glass-panel p-6 max-w-2xl mx-auto">
+                        <h2 class="text-xl font-bold mb-4">Profile ${testerBadge}</h2>
+                        <div class="space-y-3">
+                            <div><label>Profile Picture</label><br><img id="profilePreview" src="${userData.photoURL || ''}" class="w-24 h-24 rounded-full object-cover mb-2"><input type="file" id="profilePictureInput" accept="image/*" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"></div>
+                            <div><label>Nickname</label><input id="profileNickname" type="text" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" value="${userData.nickname || ''}"></div>
+                            <div><label>Real Name</label><input id="profileRealName" type="text" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" value="${userData.realName || ''}"></div>
+                            <div><label>Bio</label><textarea id="profileBio" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2">${userData.bio || ''}</textarea></div>
+                            <div><label>Birthday</label><input id="profileBirthday" type="date" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" value="${userData.birthday || ''}"></div>
+                            <div><label>Hobby</label><input id="profileHobby" type="text" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" value="${userData.hobby || ''}"></div>
+                            <button id="saveProfileBtn" class="btn-primary py-2 px-4 rounded">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById("saveProfileBtn").onclick = async () => {
+                    const updates = {
+                        nickname: document.getElementById("profileNickname").value,
+                        realName: document.getElementById("profileRealName").value,
+                        bio: document.getElementById("profileBio").value,
+                        birthday: document.getElementById("profileBirthday").value,
+                        hobby: document.getElementById("profileHobby").value
+                    };
+                    await updateDoc(doc(db, "users", currentUser.accessCode), updates);
+                    const fileInput = document.getElementById("profilePictureInput");
+                    if (fileInput.files.length > 0) {
+                        const file = fileInput.files[0];
+                        const storageRef = ref(storage, `profilePictures/${currentUser.accessCode}`);
+                        await uploadBytes(storageRef, file);
+                        const photoURL = await getDownloadURL(storageRef);
+                        await updateDoc(doc(db, "users", currentUser.accessCode), { photoURL });
+                        updates.photoURL = photoURL;
+                    }
+                    currentUser = { ...currentUser, ...updates };
+                    showToast("Profile updated");
+                    loadView("profile");
+                };
+            } else if (view === "translator") {
+                container.innerHTML = `
+                    <div class="glass-panel p-6 max-w-2xl mx-auto">
+                        <h2 class="text-xl font-bold mb-4">Translator (Words ↔ Code)</h2>
+                        <div class="flex gap-4 mb-4">
+                            <button id="encodeTab" class="btn-primary px-3 py-1 rounded">Words → Code</button>
+                            <button id="decodeTab" class="bg-gray-700 px-3 py-1 rounded">Code → Words</button>
+                        </div>
+                        <div><textarea id="inputText" rows="4" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2" placeholder="Enter text..."></textarea></div>
+                        <div><textarea id="outputText" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 mt-2" readonly placeholder="Result"></textarea></div>
+                        <button id="translateBtn" class="btn-primary mt-3 px-4 py-2 rounded">Translate</button>
+                        <button id="clearBtn" class="bg-gray-700 mt-3 px-4 py-2 rounded ml-2">Clear</button>
+                        <div class="mt-4"><button id="copyChartBtn" class="bg-gray-700 px-3 py-1 rounded text-sm">Copy Chart</button></div>
+                    </div>
+                `;
+                const encodeMap = {
+                    'A':'`','B':'~','C':'!','D':'@','E':'#','F':'$','G':'%','H':'^','I':'&','J':'*','K':'(','L':')','M':'-','N':'=','O':'+','P':'[','Q':'{','R':']','S':'}','T':'\\','U':'|','V':';','W':':','X':"'",'Y':'"','Z':',','0':'<','1':'.','2':'>','3':'/','4':'?','5':'a','6':'b','7':'c','8':'d','9':'e',' ':'_'
+                };
+                const decodeMap = Object.fromEntries(Object.entries(encodeMap).map(([k,v]) => [v,k]));
+                let mode = "encode";
+                document.getElementById("encodeTab").onclick = () => { mode = "encode"; document.getElementById("encodeTab").classList.add("btn-primary"); document.getElementById("decodeTab").classList.remove("btn-primary"); };
+                document.getElementById("decodeTab").onclick = () => { mode = "decode"; document.getElementById("decodeTab").classList.add("btn-primary"); document.getElementById("encodeTab").classList.remove("btn-primary"); };
+                document.getElementById("translateBtn").onclick = () => {
+                    const input = document.getElementById("inputText").value;
+                    let output = "";
+                    if (mode === "encode") {
+                        for (let ch of input) output += encodeMap[ch] !== undefined ? encodeMap[ch] : ch;
+                    } else {
+                        for (let ch of input) output += decodeMap[ch] !== undefined ? decodeMap[ch] : ch;
+                    }
+                    document.getElementById("outputText").value = output;
+                };
+                document.getElementById("clearBtn").onclick = () => {
+                    document.getElementById("inputText").value = "";
+                    document.getElementById("outputText").value = "";
+                };
+                document.getElementById("copyChartBtn").onclick = () => {
+                    let chart = "A=` B=~ C=! D=@ E=# F=$ G=% H=^ I=& J=* K=( L=) M=- N== O=+ P=[ Q={ R=] S=} T=\\ U=| V=; W=: X=' Y=\" Z=, 0=< 1=. 2=> 3=/ 4=? 5=a 6=b 7=c 8=d 9=e space=_";
+                    navigator.clipboard.writeText(chart);
+                    showToast("Chart copied");
+                };
+            } else {
+                container.innerHTML = `<div class="glass-panel p-6"><p>View ${view} coming soon (full implementation available).</p></div>`;
+            }
+        }
+
+        // Event listeners
+        document.getElementById("authLoginTab").onclick = () => {
+            document.getElementById("authLoginPanel").classList.remove("hidden");
+            document.getElementById("authSignupPanel").classList.add("hidden");
+        };
+        document.getElementById("authSignupTab").onclick = () => {
+            document.getElementById("authSignupPanel").classList.remove("hidden");
+            document.getElementById("authLoginPanel").classList.add("hidden");
+        };
+        document.getElementById("loginBtn").onclick = handleLogin;
+        document.getElementById("validateMemberCodeBtn").onclick = validateMemberCode;
+        document.getElementById("proceedToProfileBtn").onclick = proceedToProfile;
+        document.getElementById("finalSignupBtn").onclick = finalSignup;
+        document.getElementById("backToMemberCodeBtn").onclick = backToMemberCode;
+        document.getElementById("backToCommunityBtn").onclick = backToCommunity;
+        document.getElementById("forgotCodeBtn").onclick = () => {
+            document.getElementById("recoveryModal").classList.remove("hidden");
+            document.getElementById("recoveryAccessCode").value = "";
+            document.getElementById("recoveryQuestionsArea").innerHTML = "";
+        };
+        document.getElementById("closeRecoveryModal").onclick = () => document.getElementById("recoveryModal").classList.add("hidden");
+        document.getElementById("recoverySubmitBtn").onclick = async () => {
+            const accessCode = document.getElementById("recoveryAccessCode").value.trim();
+            if (!accessCode) return showToast("Enter Access Code");
+            const userDoc = await getDoc(doc(db, "users", accessCode));
+            if (!userDoc.exists()) return showToast("Access Code not found");
+            const userData = userDoc.data();
+            const questions = userData.securityQuestions;
+            if (!questions || questions.length === 0) {
+                showToast("No security questions set. Recovery impossible.");
+                document.getElementById("recoveryModal").classList.add("hidden");
+                return;
+            }
+            let allMatch = true;
+            for (let i = 0; i < questions.length; i++) {
+                const answer = document.getElementById(`recoveryAnswer${i}`).value.trim();
+                if (btoa(answer) !== questions[i].answerHash) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (!allMatch) return showToast("Answers do not match");
+            currentUser = { accessCode, ...userData };
+            localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: userData.role }));
+            document.getElementById("authScreen").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            document.getElementById("userRoleBadge").innerText = userData.role.toUpperCase();
+            document.getElementById("userIdDisplay").innerText = accessCode;
+            document.getElementById("recoveryModal").classList.add("hidden");
+            showToast(`Logged in. Your Member Code is: ${userData.role === "admin" ? "AMI-021" : (userData.role === "moderator" ? "OE1-266" : (userData.role === "leader" ? "LAO-012" : "MEI-021"))}`);
+            loadView("dashboard");
+        };
+        document.getElementById("addQuestionBtn").onclick = () => {
+            const container = document.getElementById("securityQuestionsContainer");
+            const idx = container.children.length + 1;
+            const div = document.createElement("div");
+            div.className = "question-item mb-2";
+            div.innerHTML = `<input type="text" class="q-text w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 mb-1" placeholder="Question ${idx}"><input type="text" class="a-text w-full bg-gray-800 border border-gray-700 rounded px-2 py-1" placeholder="Answer">`;
+            container.appendChild(div);
+            document.getElementById("securityWarning").classList.remove("hidden");
+        };
+        const settingsBtn = document.getElementById("settingsButton");
+        const dropdown = document.getElementById("settingsDropdown");
+        settingsBtn.onclick = () => dropdown.classList.toggle("hidden");
+        document.getElementById("devPanelOption").onclick = () => {
+            dropdown.classList.add("hidden");
+            if (currentUser.role === "admin") {
+                if (typeof eruda !== "undefined") { eruda.init(); eruda.show(); }
+                else showToast("Eruda not loaded");
+            } else if (currentUser.role === "moderator") {
+                const phrase = prompt("Enter developer phrase:");
+                if (phrase === "/Resistance_Dev_Op") {
+                    if (typeof eruda !== "undefined") { eruda.init(); eruda.show(); }
+                    else showToast("Eruda not loaded");
+                } else showToast("Incorrect phrase");
+            } else showToast("You are not a moderator or admin");
+        };
+        document.getElementById("logoutOption").onclick = () => {
+            localStorage.removeItem("resistanceUser");
+            updateDoc(doc(db, "users", currentUser.accessCode), { online: false, logoutTimestamp: serverTimestamp() });
+            location.reload();
+        };
+        document.getElementById("sidebarToggle").onclick = () => document.getElementById("sidebar").classList.toggle("sidebar-closed");
+        document.querySelectorAll(".nav-btn").forEach(btn => {
+            btn.onclick = () => loadView(btn.getAttribute("data-view"));
+        });
+        document.getElementById("newChatBtn").onclick = () => {
+            const targetNickname = prompt("Enter nickname of user to chat with:");
+            if (targetNickname) {
+                const q = query(collection(db, "users"), where("nickname", "==", targetNickname));
+                getDocs(q).then(snapshot => {
+                    if (snapshot.empty) showToast("User not found");
+                    else {
+                        const targetUser = snapshot.docs[0];
+                        currentPrivateChatWith = targetUser.id;
+                        loadView("private");
+                    }
+                });
+            }
+        };
+        document.getElementById("loading").style.display = "none";
+
+        (async () => {
+            const savedUser = localStorage.getItem("resistanceUser");
+            if (savedUser) {
+                const { accessCode, role } = JSON.parse(savedUser);
+                const userDoc = await getDoc(doc(db, "users", accessCode));
+                if (userDoc.exists()) {
+                    currentUser = { accessCode, ...userDoc.data() };
+                    document.getElementById("authScreen").classList.add("hidden");
+                    document.getElementById("app").classList.remove("hidden");
+                    document.getElementById("userRoleBadge").innerText = role.toUpperCase();
+                    document.getElementById("userIdDisplay").innerText = accessCode;
+                    if (role === "admin" && currentUser.communityId === "VibeVault") {
+                        document.getElementById("userRoleBadge").innerText = "LEADER";
+                    }
+                    await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
+                    loadView("dashboard");
+                } else {
+                    document.getElementById("authScreen").classList.remove("hidden");
+                    document.getElementById("app").classList.add("hidden");
+                }
+            } else {
+                document.getElementById("authScreen").classList.remove("hidden");
+                document.getElementById("app").classList.add("hidden");
+            }
+        })();
+    </script>
+</body>
+              </html>
