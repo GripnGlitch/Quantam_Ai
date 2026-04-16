@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment & secrets
+.env
+.env.local
+public/config.js
+*.key
+*.pem
+
+# Build / logs
+*.log
+.DS_Store
+dist/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
