@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security issue in Resistance (e.g., unauthorised access to private messages, privilege escalation), **do not open a public issue**. Email nikhil.sarkar1966@gmail.com directly.
+If you discover a security issue in Resistance (e.g., unauthorised access to private messages, privilege escalation), **do not open a public issue**. Report directly to @admin.
 
 We will respond within 48 hours.
 
