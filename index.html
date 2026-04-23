@@ -9,15 +9,20 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta name="theme-color" content="#000000">
-    <meta name="description" content="Private communication platform for the Resistance">
+    <!-- CSS libs -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.0.0/index.js" type="module"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.0.0/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <!-- Firebase compat SDK v9 (no modules) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Poppins", sans-serif; }
@@ -37,7 +42,7 @@
             right: 0;
             width: 50%;
             height: 100%;
-            background: #000000;
+            background: #000;
             display: flex;
             align-items: center;
             color: #e0e0e0;
@@ -49,7 +54,7 @@
         .container.active .form-box { right: 50%; }
         .form-box.register { visibility: hidden; }
         .container.active .form-box.register { visibility: visible; }
-        h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; letter-spacing: -0.5px; }
+        h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; }
         .input-box { position: relative; margin: 30px 0; }
         .input-box input, .input-box select, .input-box textarea {
             width: 100%;
@@ -60,12 +65,11 @@
             outline: none;
             font-size: 16px;
             color: #f0f0f0;
-            font-weight: 500;
         }
-        .input-box input:focus, .input-box select:focus, .input-box textarea:focus { border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
+        .input-box input:focus, .input-box select:focus { border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
         .input-box i { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #ff4757; }
         .forgot-link { margin: -15px 0 15px; text-align: right; }
-        .forgot-link a { font-size: 14px; color: #aaa; text-decoration: none; }
+        .forgot-link a { font-size: 14px; color: #aaa; }
         .btn {
             width: 100%;
             height: 48px;
@@ -109,7 +113,7 @@
         .toggle-panel.toggle-right { right: -50%; transition-delay: 0.6s; }
         .container.active .toggle-panel.toggle-right { right: 0; transition-delay: 1.2s; }
         .toggle-panel p { margin-bottom: 20px; font-size: 14px; }
-        .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; box-shadow: none; }
+        .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; }
         .cf-turnstile { margin: 15px 0; display: flex; justify-content: center; }
         .toast {
             position: fixed;
@@ -125,11 +129,21 @@
             pointer-events: none;
         }
         .toast.show { opacity: 1; }
-        /* AI chat styles */
-        .ai-message { margin-bottom: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: #1e1e1e; border-left: 3px solid #ff4757; }
         .thinking-block { background: #2a2a2a; border-left: 3px solid #ffa502; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.85rem; color: #ccc; font-style: italic; }
         .typing-slider { width: 100%; margin: 0.5rem 0; }
-        #errorDisplay { position: fixed; bottom: 0; left: 0; right: 0; background: #ff0000; color: white; padding: 8px; z-index: 9999; font-size: 12px; display: none; word-break: break-word; }
+        #errorDisplay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ff0000;
+            color: white;
+            padding: 8px;
+            z-index: 9999;
+            font-size: 12px;
+            display: none;
+            word-break: break-word;
+        }
         @media screen and (max-width: 650px) {
             .container { height: calc(100vh - 40px); }
             .form-box { bottom: 0; width: 100%; height: 70%; }
@@ -149,11 +163,15 @@
     </style>
 </head>
 <body>
+    <!-- Error display banner -->
     <div id="errorDisplay"></div>
+
+    <!-- Loading screen (will be hidden after 1 second) -->
     <div id="loadingCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:#000; display:flex; justify-content:center; align-items:center; flex-direction:column;">
         <div style="font-family:monospace; color:#ff4757; font-size:1.2rem;">RESISTANCE</div>
     </div>
 
+    <!-- Main app (hidden until auth) -->
     <div id="app" class="hidden" style="min-height:100vh; background:#000; width:100%;">
         <header style="background:#0a0a0a; border-bottom:1px solid #ff4757; padding:12px 24px; display:flex; justify-content:space-between; align-items:center;">
             <h1 style="color:#ff4757; font-size:1.5rem;">Resistance</h1>
@@ -165,6 +183,7 @@
         <div id="mainContent" style="padding:20px; color:#e0e0e0;">Dashboard loaded</div>
     </div>
 
+    <!-- Auth container (toggle form) -->
     <div class="container" id="authContainer">
         <div class="form-box login">
             <form id="loginForm">
@@ -210,6 +229,7 @@
         </div>
     </div>
 
+    <!-- Recovery Modal -->
     <div id="recoveryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; justify-content:center; align-items:center;">
         <div style="background:#0a0a0a; border:1px solid #ff4757; border-radius:20px; max-width:400px; width:90%; padding:20px;">
             <h3 style="color:#ff4757;">Recover Member Code</h3>
@@ -223,21 +243,21 @@
     <div id="toastContainer" style="position:fixed; bottom:20px; right:20px; z-index:9999;"></div>
     <audio id="loginSound" preload="auto" src="https://www.image2url.com/r2/default/audio/1776411352229-249fc2dc-41dd-49ed-aa4b-c30bae3b944c.mp3"></audio>
 
-    <script type="module">
-        // ----- ERROR CATCHER -----
+    <script>
+        // ======================== ERROR CATCHER ========================
         window.onerror = function(message, source, lineno, colno, error) {
             const errDiv = document.getElementById('errorDisplay');
             errDiv.style.display = 'block';
-            errDiv.innerHTML = `Error: ${message}<br>${source}:${lineno}`;
+            errDiv.innerHTML = `⚠️ ERROR: ${message}<br>${source}:${lineno}`;
             console.error(error);
         };
-        // ----- END ERROR CATCHER -----
+        // Force hide loading after 1.5 seconds (fallback)
+        setTimeout(() => { 
+            const loading = document.getElementById('loadingCanvas');
+            if(loading) loading.style.display = 'none';
+        }, 1500);
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
-
+        // ======================== FIREBASE CONFIG ========================
         const firebaseConfig = {
             apiKey: "AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4",
             authDomain: "resistance-webapp.firebaseapp.com",
@@ -246,14 +266,15 @@
             messagingSenderId: "985571028111",
             appId: "1:985571028111:web:53d7a322dd998d7ad814fa"
         };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
         let messaging = null;
-        try { messaging = getMessaging(app); } catch(e) { console.warn("Messaging not supported"); }
+        try { messaging = firebase.messaging(); } catch(e) { console.warn("Messaging not supported"); }
 
         const BACKEND_URL = "https://quantam-ai-1am2.onrender.com";
 
+        // Helper functions
         function showToast(msg, isError=false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -263,8 +284,20 @@
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
-        function escapeHTML(str) { return str.replace(/[&<>]/g, function(m) { if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-        function getTurnstileToken() { return document.querySelector('[name="cf-turnstile-response"]')?.value; }
+        function escapeHTML(str) { 
+            if(!str) return '';
+            return str.replace(/[&<>]/g, function(m) { 
+                if(m==='&') return '&amp;'; 
+                if(m==='<') return '&lt;'; 
+                if(m==='>') return '&gt;'; 
+                return m;
+            }); 
+        }
+        function getTurnstileToken() { 
+            const elem = document.querySelector('[name="cf-turnstile-response"]');
+            return elem ? elem.value : null;
+        }
+
         let currentUser = null;
         let aiConversationId = null;
         let aiMessagesContainer = null;
@@ -279,26 +312,26 @@
             { id: "meta-llama/Llama-3.2-1B-Instruct", name: "Llama 3.2 1B", stars: 3 }
         ];
 
-        function stopLoading() { document.getElementById('loadingCanvas').style.display = 'none'; }
+        function stopLoading() { 
+            const el = document.getElementById('loadingCanvas');
+            if(el) el.style.display = 'none'; 
+        }
 
-        // Force hide loading after 1.5 seconds (fallback)
-        setTimeout(() => { if(document.getElementById('loadingCanvas')) stopLoading(); }, 1500);
-
+        // ======================== OMNIUS AI PANEL ========================
         async function renderOmnius() {
             if (!currentUser) return;
-            const aiConvRef = collection(db, `users/${currentUser.accessCode}/aiConversations`);
-            const q = query(aiConvRef, orderBy("createdAt", "desc"));
-            const snapshot = await getDocs(q);
+            const aiConvRef = db.collection(`users/${currentUser.accessCode}/aiConversations`);
+            const snapshot = await aiConvRef.orderBy("createdAt", "desc").get();
             let convId = null;
             let messages = [];
             if (!snapshot.empty) {
                 convId = snapshot.docs[0].id;
-                const msgsRef = collection(db, `users/${currentUser.accessCode}/aiConversations/${convId}/messages`);
-                const msgsSnap = await getDocs(query(msgsRef, orderBy("timestamp", "asc")));
+                const msgsRef = db.collection(`users/${currentUser.accessCode}/aiConversations/${convId}/messages`);
+                const msgsSnap = await msgsRef.orderBy("timestamp", "asc").get();
                 messages = msgsSnap.docs.map(d => ({ role: d.data().role, content: d.data().content }));
             } else {
-                const newConvRef = await addDoc(aiConvRef, { createdAt: serverTimestamp(), title: "New conversation" });
-                convId = newConvRef.id;
+                const newConv = await aiConvRef.add({ createdAt: firebase.firestore.FieldValue.serverTimestamp(), title: "New conversation" });
+                convId = newConv.id;
             }
             aiConversationId = convId;
             const html = `
@@ -453,12 +486,12 @@
 
         async function addAIMessageToDB(role, content) {
             if (!aiConversationId) return;
-            const msgsRef = collection(db, `users/${currentUser.accessCode}/aiConversations/${aiConversationId}/messages`);
-            await addDoc(msgsRef, { role, content, timestamp: serverTimestamp() });
+            const msgsRef = db.collection(`users/${currentUser.accessCode}/aiConversations/${aiConversationId}/messages`);
+            await msgsRef.add({ role, content, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         }
         async function createNewAIConversation() {
-            const aiConvRef = collection(db, `users/${currentUser.accessCode}/aiConversations`);
-            const newConv = await addDoc(aiConvRef, { createdAt: serverTimestamp(), title: "New conversation" });
+            const aiConvRef = db.collection(`users/${currentUser.accessCode}/aiConversations`);
+            const newConv = await aiConvRef.add({ createdAt: firebase.firestore.FieldValue.serverTimestamp(), title: "New conversation" });
             aiConversationId = newConv.id;
             renderOmnius();
         }
@@ -471,7 +504,7 @@
             document.getElementById('mainContent').innerHTML = `<div style="background:#0a0a0a; padding:20px;"><h2 class="text-xl font-bold text-red-500">${view.toUpperCase()}</h2><p>Feature ready.</p></div>`;
         }
 
-        // Auth handlers
+        // ======================== AUTHENTICATION HANDLERS ========================
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const accessCode = document.getElementById('loginAccessCode').value.trim();
@@ -485,8 +518,8 @@
             else if (memberCode === "LAO-012") role = "leader";
             else if (memberCode === "MEI-021") role = "member";
             else { showToast("Invalid Member Code", true); return; }
-            const userDoc = await getDoc(doc(db, "users", accessCode));
-            if (!userDoc.exists()) { showToast("Access Code not found", true); return; }
+            const userDoc = await db.collection('users').doc(accessCode).get();
+            if (!userDoc.exists) { showToast("Access Code not found", true); return; }
             const userData = userDoc.data();
             if (userData.role !== role) { showToast("Member Code mismatch", true); return; }
             currentUser = { accessCode, ...userData };
@@ -494,13 +527,13 @@
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('app').classList.remove('hidden');
             document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
+            await db.collection('users').doc(accessCode).update({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
             stopLoading();
             loadView('dashboard');
             document.getElementById('loginSound').play().catch(e=>null);
         });
 
-        // Signup flow (simplified but functional)
+        // Signup flow (simplified but complete)
         let validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
         document.getElementById('validateMemberCodeBtn').onclick = () => {
             const memberCode = document.getElementById('signupMemberCode').value.trim();
@@ -574,10 +607,10 @@
                 if (!res.ok) throw new Error(data.error || "Signup failed");
                 const accessCode = data.accessCode;
                 if (file) {
-                    const storageRef = ref(storage, `profilePictures/${accessCode}`);
-                    await uploadBytes(storageRef, file);
-                    const photoURL = await getDownloadURL(storageRef);
-                    await updateDoc(doc(db, "users", accessCode), { photoURL });
+                    const storageRef = storage.ref(`profilePictures/${accessCode}`);
+                    await storageRef.put(file);
+                    const photoURL = await storageRef.getDownloadURL();
+                    await db.collection('users').doc(accessCode).update({ photoURL });
                 }
                 showToast(`Account created! Your Access Code: ${accessCode}. Save it.`);
                 localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: validatedRole }));
@@ -598,8 +631,8 @@
         document.getElementById('recoverySubmitBtn').onclick = async () => {
             const accessCode = document.getElementById('recoveryAccessCode').value.trim();
             if (!accessCode) { showToast("Enter Access Code", true); return; }
-            const userDoc = await getDoc(doc(db, "users", accessCode));
-            if (!userDoc.exists()) { showToast("Access Code not found", true); return; }
+            const userDoc = await db.collection('users').doc(accessCode).get();
+            if (!userDoc.exists) { showToast("Access Code not found", true); return; }
             const userData = userDoc.data();
             const questions = userData.securityQuestions;
             if (!questions || !questions.length) { showToast("No security questions set.", true); return; }
@@ -640,7 +673,7 @@
 
         // Logout
         document.getElementById('logoutBtn').onclick = async () => {
-            if (currentUser) await updateDoc(doc(db, "users", currentUser.accessCode), { online: false, lastSeen: serverTimestamp() });
+            if (currentUser) await db.collection('users').doc(currentUser.accessCode).update({ online: false, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
             localStorage.removeItem('resistanceUser');
             location.reload();
         };
@@ -658,20 +691,22 @@
 
         // Auto-login if session exists
         (async () => {
-            const saved = localStorage.getItem('resistanceUser');
-            if (saved) {
-                const { accessCode, role } = JSON.parse(saved);
-                const userDoc = await getDoc(doc(db, "users", accessCode));
-                if (userDoc.exists()) {
-                    currentUser = { accessCode, ...userDoc.data() };
-                    document.getElementById('authContainer').style.display = 'none';
-                    document.getElementById('app').classList.remove('hidden');
-                    document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-                    await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
-                    stopLoading();
-                    loadView('dashboard');
-                } else { localStorage.removeItem('resistanceUser'); }
-            }
+            try {
+                const saved = localStorage.getItem('resistanceUser');
+                if (saved) {
+                    const { accessCode, role } = JSON.parse(saved);
+                    const userDoc = await db.collection('users').doc(accessCode).get();
+                    if (userDoc.exists) {
+                        currentUser = { accessCode, ...userDoc.data() };
+                        document.getElementById('authContainer').style.display = 'none';
+                        document.getElementById('app').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').innerText = role.toUpperCase();
+                        await db.collection('users').doc(accessCode).update({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+                        stopLoading();
+                        loadView('dashboard');
+                    } else { localStorage.removeItem('resistanceUser'); }
+                }
+            } catch(e) { console.error(e); }
             setTimeout(() => stopLoading(), 100);
         })();
     </script>
