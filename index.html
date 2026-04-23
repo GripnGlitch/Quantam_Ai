@@ -9,6 +9,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta name="theme-color" content="#000000">
+    <meta name="description" content="Private communication platform for the Resistance">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -36,7 +37,7 @@
             right: 0;
             width: 50%;
             height: 100%;
-            background: #000;
+            background: #000000;
             display: flex;
             align-items: center;
             color: #e0e0e0;
@@ -48,7 +49,7 @@
         .container.active .form-box { right: 50%; }
         .form-box.register { visibility: hidden; }
         .container.active .form-box.register { visibility: visible; }
-        h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; }
+        h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; letter-spacing: -0.5px; }
         .input-box { position: relative; margin: 30px 0; }
         .input-box input, .input-box select, .input-box textarea {
             width: 100%;
@@ -59,11 +60,12 @@
             outline: none;
             font-size: 16px;
             color: #f0f0f0;
+            font-weight: 500;
         }
-        .input-box input:focus, .input-box select:focus { border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
+        .input-box input:focus, .input-box select:focus, .input-box textarea:focus { border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
         .input-box i { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #ff4757; }
         .forgot-link { margin: -15px 0 15px; text-align: right; }
-        .forgot-link a { font-size: 14px; color: #aaa; }
+        .forgot-link a { font-size: 14px; color: #aaa; text-decoration: none; }
         .btn {
             width: 100%;
             height: 48px;
@@ -107,13 +109,27 @@
         .toggle-panel.toggle-right { right: -50%; transition-delay: 0.6s; }
         .container.active .toggle-panel.toggle-right { right: 0; transition-delay: 1.2s; }
         .toggle-panel p { margin-bottom: 20px; font-size: 14px; }
-        .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; }
+        .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; box-shadow: none; }
         .cf-turnstile { margin: 15px 0; display: flex; justify-content: center; }
-        .toast { position: fixed; bottom: 20px; right: 20px; background: #aa2e78; color: white; padding: 12px 24px; border-radius: 8px; z-index: 10000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #aa2e78;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
         .toast.show { opacity: 1; }
+        /* AI chat styles */
         .ai-message { margin-bottom: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: #1e1e1e; border-left: 3px solid #ff4757; }
         .thinking-block { background: #2a2a2a; border-left: 3px solid #ffa502; padding: 0.5rem; margin-bottom: 0.5rem; font-size: 0.85rem; color: #ccc; font-style: italic; }
         .typing-slider { width: 100%; margin: 0.5rem 0; }
+        #errorDisplay { position: fixed; bottom: 0; left: 0; right: 0; background: #ff0000; color: white; padding: 8px; z-index: 9999; font-size: 12px; display: none; word-break: break-word; }
         @media screen and (max-width: 650px) {
             .container { height: calc(100vh - 40px); }
             .form-box { bottom: 0; width: 100%; height: 70%; }
@@ -133,6 +149,7 @@
     </style>
 </head>
 <body>
+    <div id="errorDisplay"></div>
     <div id="loadingCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:#000; display:flex; justify-content:center; align-items:center; flex-direction:column;">
         <div style="font-family:monospace; color:#ff4757; font-size:1.2rem;">RESISTANCE</div>
     </div>
@@ -207,10 +224,19 @@
     <audio id="loginSound" preload="auto" src="https://www.image2url.com/r2/default/audio/1776411352229-249fc2dc-41dd-49ed-aa4b-c30bae3b944c.mp3"></audio>
 
     <script type="module">
-        import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-        import { getMessaging, getToken, onMessage } from "firebase/messaging";
+        // ----- ERROR CATCHER -----
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errDiv = document.getElementById('errorDisplay');
+            errDiv.style.display = 'block';
+            errDiv.innerHTML = `Error: ${message}<br>${source}:${lineno}`;
+            console.error(error);
+        };
+        // ----- END ERROR CATCHER -----
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4",
@@ -254,6 +280,9 @@
         ];
 
         function stopLoading() { document.getElementById('loadingCanvas').style.display = 'none'; }
+
+        // Force hide loading after 1.5 seconds (fallback)
+        setTimeout(() => { if(document.getElementById('loadingCanvas')) stopLoading(); }, 1500);
 
         async function renderOmnius() {
             if (!currentUser) return;
@@ -330,8 +359,11 @@
             const prompt = inputEl.value.trim();
             if (!prompt) return;
             inputEl.value = '';
-            // add user message
-            addAIMessageToUI('user', prompt, false);
+            // user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'mb-3 text-right';
+            userDiv.innerHTML = `<span class="inline-block bg-red-800 text-white px-4 py-2 rounded-xl max-w-[80%]">${escapeHTML(prompt)}</span>`;
+            aiMessagesContainer.appendChild(userDiv);
             await addAIMessageToDB('user', prompt);
             const typingDiv = document.createElement('div');
             typingDiv.className = 'mb-3';
@@ -341,11 +373,10 @@
 
             const modelToUse = randomModelEnabled ? availableModels[Math.floor(Math.random() * availableModels.length)].id : currentSelectedModel;
             try {
-                const messages = [{ role: 'user', content: prompt }];
                 const response = await fetch(`${BACKEND_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: modelToUse, messages, stream: true })
+                    body: JSON.stringify({ model: modelToUse, messages: [{ role: 'user', content: prompt }], stream: true })
                 });
                 if (!response.ok) throw new Error(await response.text());
                 const reader = response.body.getReader();
@@ -355,9 +386,9 @@
                 let state = 'none';
                 let thinkingDiv = null, answerDiv = null;
                 typingDiv.remove();
-                const assistantMsgDiv = document.createElement('div');
-                assistantMsgDiv.className = 'mb-3';
-                aiMessagesContainer.appendChild(assistantMsgDiv);
+                const assistantDiv = document.createElement('div');
+                assistantDiv.className = 'mb-3';
+                aiMessagesContainer.appendChild(assistantDiv);
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -376,7 +407,7 @@
                                         state = 'thinking';
                                         thinkingDiv = document.createElement('div');
                                         thinkingDiv.className = 'thinking-block mb-1';
-                                        assistantMsgDiv.appendChild(thinkingDiv);
+                                        assistantDiv.appendChild(thinkingDiv);
                                     }
                                     if (state === 'thinking') {
                                         let thinkPart = fullContent.split('[Thinking]')[1];
@@ -386,7 +417,7 @@
                                             state = 'answer';
                                             answerDiv = document.createElement('div');
                                             answerDiv.className = 'bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]';
-                                            assistantMsgDiv.appendChild(answerDiv);
+                                            assistantDiv.appendChild(answerDiv);
                                         } else {
                                             thinking = thinkPart;
                                         }
@@ -398,7 +429,7 @@
                                         if (!answerDiv) {
                                             answerDiv = document.createElement('div');
                                             answerDiv.className = 'bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]';
-                                            assistantMsgDiv.appendChild(answerDiv);
+                                            assistantDiv.appendChild(answerDiv);
                                         }
                                         answer = fullContent;
                                         answerDiv.innerHTML = marked.parse(answer);
@@ -420,7 +451,6 @@
             }
         }
 
-        function addAIMessageToUI(role, content, isAssistant=false) { /* handled inline */ }
         async function addAIMessageToDB(role, content) {
             if (!aiConversationId) return;
             const msgsRef = collection(db, `users/${currentUser.accessCode}/aiConversations/${aiConversationId}/messages`);
@@ -441,7 +471,7 @@
             document.getElementById('mainContent').innerHTML = `<div style="background:#0a0a0a; padding:20px;"><h2 class="text-xl font-bold text-red-500">${view.toUpperCase()}</h2><p>Feature ready.</p></div>`;
         }
 
-        // Auth handlers (same as before, but simplified – keep your existing working version)
+        // Auth handlers
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const accessCode = document.getElementById('loginAccessCode').value.trim();
@@ -464,23 +494,161 @@
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('app').classList.remove('hidden');
             document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            await updateDoc(doc(db, "accessCode"), { online: true, lastSeen: serverTimestamp() });
+            await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
             stopLoading();
             loadView('dashboard');
             document.getElementById('loginSound').play().catch(e=>null);
         });
 
-        // Signup etc. (keep your existing code for brevity – it's correct)
-        // ... (the rest of signup, recovery, etc. from your previous working version)
+        // Signup flow (simplified but functional)
+        let validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
+        document.getElementById('validateMemberCodeBtn').onclick = () => {
+            const memberCode = document.getElementById('signupMemberCode').value.trim();
+            if (memberCode === "AMI-021") validatedRole = "admin";
+            else if (memberCode === "OE1-266") validatedRole = "moderator";
+            else if (memberCode === "LAO-012") validatedRole = "leader";
+            else if (memberCode === "MEI-021") validatedRole = "member";
+            else { showToast("Invalid Member Code", true); return; }
+            validatedMemberCode = memberCode;
+            document.getElementById('signupStep1').style.display = 'none';
+            document.getElementById('signupStep2').style.display = 'block';
+        };
+        document.getElementById('proceedToProfileBtn').onclick = () => {
+            const community = document.getElementById('communitySelect').value;
+            if (!community) { showToast("Select a community", true); return; }
+            tempCommunityId = community;
+            document.getElementById('signupStep2').style.display = 'none';
+            document.getElementById('signupStep3').style.display = 'block';
+        };
+        document.getElementById('backToMemberCodeBtn').onclick = () => {
+            document.getElementById('signupStep2').style.display = 'none';
+            document.getElementById('signupStep1').style.display = 'block';
+        };
+        document.getElementById('backToCommunityBtn2').onclick = () => {
+            document.getElementById('signupStep3').style.display = 'none';
+            document.getElementById('signupStep2').style.display = 'block';
+        };
+        document.getElementById('addQuestionBtn').onclick = () => {
+            const containerDiv = document.getElementById('securityQuestionsContainer');
+            const div = document.createElement('div');
+            div.className = 'security-question-item';
+            div.innerHTML = `<input type="text" class="q-text" placeholder="Question" style="width:100%; margin:5px 0; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;"><input type="text" class="a-text" placeholder="Answer" style="width:100%; margin-bottom:10px; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;">`;
+            containerDiv.appendChild(div);
+            document.getElementById('securityWarning').style.display = 'block';
+        };
+        document.getElementById('finalSignupBtn').onclick = async () => {
+            const turnstileToken = getTurnstileToken();
+            if (!turnstileToken) { showToast("Complete CAPTCHA", true); return; }
+            const nickname = document.getElementById('profileNickname').value.trim() || "User";
+            const realName = document.getElementById('profileRealName').value.trim();
+            const bio = document.getElementById('profileBio').value.trim();
+            const birthday = document.getElementById('profileBirthday').value;
+            const hobby = document.getElementById('profileHobby').value.trim();
+            const questionDivs = document.querySelectorAll('.security-question-item');
+            const securityQuestions = [];
+            for (let qd of questionDivs) {
+                const q = qd.querySelector('.q-text').value;
+                const a = qd.querySelector('.a-text').value;
+                if (q && a) {
+                    const encoder = new TextEncoder();
+                    const hash = await crypto.subtle.digest('SHA-256', encoder.encode(a));
+                    const hashHex = Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+                    securityQuestions.push({ question: q, answerHash: hashHex });
+                }
+            }
+            const file = document.getElementById('signupProfilePic').files[0];
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        memberCode: validatedMemberCode,
+                        role: validatedRole,
+                        communityId: tempCommunityId,
+                        nickname, realName, bio, birthday, hobby,
+                        securityQuestions,
+                        turnstileToken
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Signup failed");
+                const accessCode = data.accessCode;
+                if (file) {
+                    const storageRef = ref(storage, `profilePictures/${accessCode}`);
+                    await uploadBytes(storageRef, file);
+                    const photoURL = await getDownloadURL(storageRef);
+                    await updateDoc(doc(db, "users", accessCode), { photoURL });
+                }
+                showToast(`Account created! Your Access Code: ${accessCode}. Save it.`);
+                localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: validatedRole }));
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('app').classList.remove('hidden');
+                document.getElementById('userRoleBadge').innerText = validatedRole.toUpperCase();
+                stopLoading();
+                document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome, ${escapeHTML(nickname)}</h2><p>Your Access Code: ${accessCode}</p></div>`;
+            } catch(err) { showToast(err.message, true); }
+        };
 
-        // For brevity, I assume you have the rest of the working handlers.
-        // But to make this complete, I'll include essential ones:
+        // Recovery flow
+        document.getElementById('forgotCodeLink').onclick = async (e) => {
+            e.preventDefault();
+            document.getElementById('recoveryModal').style.display = 'flex';
+        };
+        document.getElementById('closeRecoveryModal').onclick = () => document.getElementById('recoveryModal').style.display = 'none';
+        document.getElementById('recoverySubmitBtn').onclick = async () => {
+            const accessCode = document.getElementById('recoveryAccessCode').value.trim();
+            if (!accessCode) { showToast("Enter Access Code", true); return; }
+            const userDoc = await getDoc(doc(db, "users", accessCode));
+            if (!userDoc.exists()) { showToast("Access Code not found", true); return; }
+            const userData = userDoc.data();
+            const questions = userData.securityQuestions;
+            if (!questions || !questions.length) { showToast("No security questions set.", true); return; }
+            const area = document.getElementById('recoveryQuestionsArea');
+            area.innerHTML = '';
+            for (let i=0; i<questions.length; i++) {
+                const div = document.createElement('div');
+                div.innerHTML = `<label style="color:white;">${escapeHTML(questions[i].question)}</label><input type="text" id="recAns${i}" class="recAnswer" style="width:100%; margin-bottom:10px; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;">`;
+                area.appendChild(div);
+            }
+            const answers = await new Promise((resolve) => {
+                const btn = document.createElement('button');
+                btn.textContent = "Verify Answers";
+                btn.className = "btn";
+                btn.onclick = () => {
+                    const ans = [];
+                    for (let i=0; i<questions.length; i++) ans.push(document.getElementById(`recAns${i}`).value.trim());
+                    resolve(ans);
+                };
+                area.appendChild(btn);
+            });
+            let allMatch = true;
+            for (let i=0; i<questions.length; i++) {
+                const encoder = new TextEncoder();
+                const hash = await crypto.subtle.digest('SHA-256', encoder.encode(answers[i]));
+                const hashHex = Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+                if (hashHex !== questions[i].answerHash) allMatch = false;
+            }
+            if (!allMatch) { showToast("Answers do not match", true); return; }
+            let memberCode = "";
+            if (userData.role === "admin") memberCode = "AMI-021";
+            else if (userData.role === "moderator") memberCode = "OE1-266";
+            else if (userData.role === "leader") memberCode = "LAO-012";
+            else memberCode = "MEI-021";
+            showToast(`Your Member Code: ${memberCode}`);
+            document.getElementById('recoveryModal').style.display = 'none';
+        };
 
+        // Logout
+        document.getElementById('logoutBtn').onclick = async () => {
+            if (currentUser) await updateDoc(doc(db, "users", currentUser.accessCode), { online: false, lastSeen: serverTimestamp() });
+            localStorage.removeItem('resistanceUser');
+            location.reload();
+        };
+
+        // UI toggle handlers
         const container = document.querySelector('.container');
         document.querySelector('.register-btn').addEventListener('click', () => container.classList.add('active'));
         document.querySelector('.login-btn').addEventListener('click', () => container.classList.remove('active'));
-
-        // Navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const view = btn.getAttribute('data-view');
@@ -488,7 +656,7 @@
             });
         });
 
-        // Auto-login
+        // Auto-login if session exists
         (async () => {
             const saved = localStorage.getItem('resistanceUser');
             if (saved) {
@@ -508,4 +676,4 @@
         })();
     </script>
 </body>
-</html>
+    </html>
