@@ -1,15 +1,168 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
+    
+    function isModerator() {
+      return getUserRole() == 'moderator';
+    }
+    
+    function isLeaderOfCommunity(communityId) {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return (userData.role == 'leader' && userData.communityId == communityId);
+    }
+    
+    function isMemberOfCommunity(communityId) {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return (userData.communityId == communityId);
+    }
+    
+    // ========================
+    // Users collection
+    // ========================
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated();
     }
+    
+    // ========================
+    // Global Chat (messages)
+    // ========================
+    match /globalMessages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        (getUserRole() in ['admin', 'moderator'] || 
+         !exists(/databases/$(database)/documents/settings/globalChatMuted));
+      allow update: if isAuthenticated() && 
+        (isAdmin() || request.auth.uid == resource.data.senderId);
+      allow delete: if isAdmin();
+    }
+    
+    // ========================
+    // Community Chats
+    // ========================
+    match /communities/{communityId}/messages/{messageId} {
+      allow read: if isAuthenticated() && isMemberOfCommunity(communityId);
+      allow create: if isAuthenticated() && isMemberOfCommunity(communityId) &&
+        (isAdmin() || isModerator() || isLeaderOfCommunity(communityId) || 
+         !get(/databases/$(database)/documents/communities/$(communityId)).data.muted);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || isModerator() || isLeaderOfCommunity(communityId) || 
+         request.auth.uid == resource.data.senderId);
+      allow delete: if isAdmin() || isModerator() || isLeaderOfCommunity(communityId);
+    }
+    
+    // ========================
+    // Private Messages (1-to-1)
+    // Admin backdoor: admin can read any private message.
+    // ========================
     match /privateChats/{chatId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAuthenticated() && 
+        (isAdmin() || resource.data.participants.hasAny([request.auth.uid]));
+      allow write: if isAuthenticated() && 
+        (isAdmin() || resource.data.participants.hasAny([request.auth.uid]));
     }
-    match /adminAuditLogs/{log} {
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    
+    match /privateChats/{chatId}/messages/{messageId} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || get(/databases/$(database)/documents/privateChats/$(chatId)).data.participants.hasAny([request.auth.uid]));
+      allow create: if isAuthenticated() && 
+        get(/databases/$(database)/documents/privateChats/$(chatId)).data.participants.hasAny([request.auth.uid]);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || request.auth.uid == resource.data.senderId);
+      allow delete: if isAdmin();
     }
+    
+    // ========================
+    // Groups (inside communities)
+    // ========================
+    match /communities/{communityId}/groups/{groupId} {
+      allow read: if isAuthenticated() && isMemberOfCommunity(communityId);
+      allow create: if isAuthenticated() && isMemberOfCommunity(communityId);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || isModerator() || isLeaderOfCommunity(communityId) || 
+         request.auth.uid == resource.data.creatorId);
+      allow delete: if isAdmin() || isModerator() || isLeaderOfCommunity(communityId);
+    }
+    
+    match /communities/{communityId}/groups/{groupId}/messages/{messageId} {
+      allow read: if isAuthenticated() && isMemberOfCommunity(communityId);
+      allow create: if isAuthenticated() && 
+        get(/databases/$(database)/documents/communities/$(communityId)/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || isModerator() || isLeaderOfCommunity(communityId) || 
+         request.auth.uid == resource.data.senderId);
+      allow delete: if isAdmin() || isModerator() || isLeaderOfCommunity(communityId);
+    }
+    
+    // ========================
+    // Announcements
+    // ========================
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isAdmin() || isModerator());
+      allow update: if isAuthenticated() && (isAdmin() || isModerator());
+      allow delete: if isAdmin();
+    }
+    
+    // ========================
+    // Events
+    // ========================
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        (isAdmin() || isModerator() || isLeaderOfCommunity(resource.data.communityId));
+      allow update: if isAuthenticated() && 
+        (isAdmin() || isModerator() || isLeaderOfCommunity(resource.data.communityId));
+      allow delete: if isAdmin() || isModerator() || isLeaderOfCommunity(resource.data.communityId);
+    }
+    
+    // ========================
+    // Polls
+    // ========================
+    match /polls/{pollId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow vote: if isAuthenticated() && 
+        !resource.data.voters.hasAny([request.auth.uid]);
+    }
+    
+    // ========================
+    // Admin Audit Logs (only admin can read/write)
+    // ========================
+    match /adminAuditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // ========================
+    // Settings (global mute, etc.)
+    // ========================
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // ========================
+    // File metadata (optional)
+    // ========================
+    match /files/{fileId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow delete: if isAdmin() || request.auth.uid == resource.data.uploaderId;
+    }
+    
   }
 }
