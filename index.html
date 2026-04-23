@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Resistance · The Collective</title>
+    <title>Resistance</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta name="theme-color" content="#000000">
     <meta name="description" content="Private communication platform for the Resistance">
-    <!-- Tailwind + Font Awesome + Flatpickr + Emoji Picker + Marked -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -20,24 +19,10 @@
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <!-- Turnstile CAPTCHA -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    <!-- Google Fonts for Poppins (same as design) -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* ======= Deep Black & Red Theme + original toggle styles ======= */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Poppins", sans-serif;
-        }
-        body {
-            background: #000;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        /* custom toggle box (modern slide) */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Poppins", sans-serif; }
+        body { background: #000; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
         .container {
             position: relative;
             width: 850px;
@@ -62,21 +47,12 @@
             z-index: 1;
             transition: 0.6s ease-in-out 1.2s, visibility 0s 1s;
         }
-        .container.active .form-box {
-            right: 50%;
-        }
-        .form-box.register {
-            visibility: hidden;
-        }
-        .container.active .form-box.register {
-            visibility: visible;
-        }
+        .container.active .form-box { right: 50%; }
+        .form-box.register { visibility: hidden; }
+        .container.active .form-box.register { visibility: visible; }
         h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; letter-spacing: -0.5px; }
-        .input-box {
-            position: relative;
-            margin: 30px 0;
-        }
-        .input-box input {
+        .input-box { position: relative; margin: 30px 0; }
+        .input-box input, .input-box select, .input-box textarea {
             width: 100%;
             padding: 13px 50px 13px 20px;
             background: #1a1a1a;
@@ -86,9 +62,8 @@
             font-size: 16px;
             color: #f0f0f0;
             font-weight: 500;
-            transition: all 0.2s;
         }
-        .input-box input:focus {
+        .input-box input:focus, .input-box select:focus, .input-box textarea:focus {
             border-color: #ff4757;
             box-shadow: 0 0 5px #ff4757;
         }
@@ -100,15 +75,8 @@
             font-size: 20px;
             color: #ff4757;
         }
-        .forgot-link {
-            margin: -15px 0 15px;
-            text-align: right;
-        }
-        .forgot-link a {
-            font-size: 14px;
-            color: #aaa;
-            text-decoration: none;
-        }
+        .forgot-link { margin: -15px 0 15px; text-align: right; }
+        .forgot-link a { font-size: 14px; color: #aaa; text-decoration: none; }
         .btn {
             width: 100%;
             height: 48px;
@@ -121,31 +89,20 @@
             color: #fff;
             transition: all 0.2s;
         }
-        .btn:hover {
-            background: #aa2e78;
-            transform: scale(1.02);
-            box-shadow: 0 0 12px #ff4757;
-        }
-        .toggle-box {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
+        .btn:hover { background: #aa2e78; transform: scale(1.02); box-shadow: 0 0 12px #ff4757; }
+        .toggle-box { position: absolute; width: 100%; height: 100%; }
         .toggle-box::before {
             content: "";
             position: absolute;
             left: -250%;
             width: 300%;
             height: 100%;
-            background: #aa2e78;
+            background: linear-gradient(135deg, #aa2e78, #ff4757);
             border-radius: 150px;
             z-index: 2;
             transition: 1.8s ease-in-out;
-            background: linear-gradient(135deg, #aa2e78, #ff4757);
         }
-        .container.active .toggle-box::before {
-            left: 50%;
-        }
+        .container.active .toggle-box::before { left: 50%; }
         .toggle-panel {
             position: absolute;
             width: 50%;
@@ -158,41 +115,14 @@
             z-index: 2;
             transition: 0.6s ease-in-out;
         }
-        .toggle-panel.toggle-left {
-            left: 0;
-            transition-delay: 1.2s;
-        }
-        .container.active .toggle-panel.toggle-left {
-            left: -50%;
-            transition-delay: 0.6s;
-        }
-        .toggle-panel.toggle-right {
-            right: -50%;
-            transition-delay: 0.6s;
-        }
-        .container.active .toggle-panel.toggle-right {
-            right: 0;
-            transition-delay: 1.2s;
-        }
-        .toggle-panel p {
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .toggle-panel .btn {
-            width: 160px;
-            background: transparent;
-            border: 2px solid #fff;
-            box-shadow: none;
-        }
-        /* CAPTCHA widget adjustment */
-        .cf-turnstile {
-            margin: 15px 0;
-            display: flex;
-            justify-content: center;
-        }
-        /* remove social icons section */
+        .toggle-panel.toggle-left { left: 0; transition-delay: 1.2s; }
+        .container.active .toggle-panel.toggle-left { left: -50%; transition-delay: 0.6s; }
+        .toggle-panel.toggle-right { right: -50%; transition-delay: 0.6s; }
+        .container.active .toggle-panel.toggle-right { right: 0; transition-delay: 1.2s; }
+        .toggle-panel p { margin-bottom: 20px; font-size: 14px; }
+        .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; box-shadow: none; }
+        .cf-turnstile { margin: 15px 0; display: flex; justify-content: center; }
         .social-icons { display: none; }
-        /* toast */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -205,10 +135,8 @@
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
-            font-family: monospace;
         }
         .toast.show { opacity: 1; }
-        /* responsive (original) */
         @media screen and (max-width: 650px) {
             .container { height: calc(100vh - 40px); }
             .form-box { bottom: 0; width: 100%; height: 70%; }
@@ -225,18 +153,14 @@
             .form-box { padding: 20px; }
             .toggle-panel h1 { font-size: 30px; }
         }
-        .glass-panel { background: transparent; }
     </style>
 </head>
 <body>
-    <!-- Loading overlay (Three.js will be added later) -->
     <div id="loadingCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:#000; display:flex; justify-content:center; align-items:center; flex-direction:column;">
         <div style="font-family:monospace; color:#ff4757; font-size:1.2rem;">RESISTANCE</div>
     </div>
 
-    <!-- Main App (hidden until auth) -->
     <div id="app" class="hidden" style="min-height:100vh; background:#000; width:100%;">
-        <!-- header (simplified) -->
         <header style="background:#0a0a0a; border-bottom:1px solid #ff4757; padding:12px 24px; display:flex; justify-content:space-between; align-items:center;">
             <h1 style="color:#ff4757; font-size:1.5rem;">Resistance</h1>
             <div>
@@ -247,9 +171,7 @@
         <div id="mainContent" style="padding:20px; color:#e0e0e0;">Dashboard loaded</div>
     </div>
 
-    <!-- Auth container (toggle form) -->
     <div class="container" id="authContainer">
-        <!-- Login form -->
         <div class="form-box login">
             <form id="loginForm">
                 <h1>Login</h1>
@@ -264,11 +186,9 @@
                 <div class="cf-turnstile" data-sitekey="0x4AAAAAADB9qB6YsaSUFV0q"></div>
                 <div class="forgot-link"><a href="#" id="forgotCodeLink">Forgot Member Code?</a></div>
                 <button type="submit" class="btn" id="loginBtnSubmit">Login</button>
-                <!-- removed social media -->
             </form>
         </div>
 
-        <!-- Register form -->
         <div class="form-box register">
             <form id="registerForm">
                 <h1>Sign Up</h1>
@@ -278,7 +198,7 @@
                 </div>
                 <div id="signupStep2" style="display:none;">
                     <div class="input-box">
-                        <select id="communitySelect" class="input-box" style="background:#1a1a1a; color:white; padding:13px 20px; border-radius:8px; border:1px solid #333;">
+                        <select id="communitySelect" style="background:#1a1a1a; color:white; padding:13px 20px; border-radius:8px; border:1px solid #333;">
                             <option value="">-- Select Community --</option>
                             <option value="VibeVault">Vibe Vault</option>
                             <option value="Onyx">Onyx</option>
@@ -292,7 +212,7 @@
                 <div id="signupStep3" style="display:none;">
                     <div class="input-box"><input type="text" id="profileNickname" placeholder="Nickname"><i class='bx bxs-user'></i></div>
                     <div class="input-box"><input type="text" id="profileRealName" placeholder="Real Name (optional)"><i class='bx bxs-user'></i></div>
-                    <div class="input-box"><textarea id="profileBio" rows="2" placeholder="Bio" style="background:#1a1a1a; border:1px solid #333; color:white; border-radius:8px; width:100%; padding:10px;"></textarea></div>
+                    <div class="input-box"><textarea id="profileBio" rows="2" placeholder="Bio"></textarea></div>
                     <div class="input-box"><input type="date" id="profileBirthday" placeholder="Birthday"><i class='bx bxs-calendar'></i></div>
                     <div class="input-box"><input type="text" id="profileHobby" placeholder="Favorite Hobby"><i class='bx bxs-heart'></i></div>
                     <div class="input-box"><input type="file" id="signupProfilePic" accept="image/*"><i class='bx bxs-image'></i></div>
@@ -320,7 +240,6 @@
         </div>
     </div>
 
-    <!-- Recovery Modal -->
     <div id="recoveryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; justify-content:center; align-items:center;">
         <div style="background:#0a0a0a; border:1px solid #ff4757; border-radius:20px; max-width:400px; width:90%; padding:20px;">
             <h3 style="color:#ff4757;">Recover Member Code</h3>
@@ -335,11 +254,9 @@
     <audio id="loginSound" preload="auto" src="https://www.image2url.com/r2/default/audio/1776411352229-249fc2dc-41dd-49ed-aa4b-c30bae3b944c.mp3"></audio>
 
     <script type="module">
-        import * as THREE from "three"; // will be used later
         import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, query, where, serverTimestamp } from "firebase/firestore";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-        import { getMessaging, getToken } from "firebase/messaging";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4",
@@ -352,10 +269,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        let messaging = null;
-        try { messaging = getMessaging(app); } catch(e) {}
+        const BACKEND_URL = "https://quantam-ai-1am2.onrender.com"; // your Render backend URL
 
-        // helper functions
         function showToast(msg, isError=false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -365,30 +280,19 @@
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
-
         function escapeHTML(str) { return str.replace(/[&<>]/g, function(m) { if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        function getTurnstileToken() { return document.querySelector('[name="cf-turnstile-response"]')?.value; }
+        let currentUser = null, validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
 
-        // Three.js minimal (just for loading effect, will stop after auth)
-        let animFrame;
-        function stopThree() { if(animFrame) cancelAnimationFrame(animFrame); document.getElementById('loadingCanvas').style.display = 'none'; }
-        window.stopThree = stopThree;
+        // Stop loading animation (demo)
+        function stopLoading() { document.getElementById('loadingCanvas').style.display = 'none'; }
 
-        // Turnstile token retrieval
-        function getTurnstileToken() {
-            const elem = document.querySelector('[name="cf-turnstile-response"]');
-            return elem ? elem.value : null;
-        }
-
-        // --- Global state ---
-        let currentUser = null;
-        let validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
-
-        // --- UI toggle handlers ---
+        // UI toggle handlers
         const container = document.querySelector('.container');
         document.querySelector('.register-btn').addEventListener('click', () => container.classList.add('active'));
         document.querySelector('.login-btn').addEventListener('click', () => container.classList.remove('active'));
 
-        // --- Login handler ---
+        // --- Login via backend (Turnstile verified) ---
         async function handleLogin(e) {
             e.preventDefault();
             const accessCode = document.getElementById('loginAccessCode').value.trim();
@@ -396,30 +300,31 @@
             const turnstileToken = getTurnstileToken();
             if (!turnstileToken) { showToast("Complete CAPTCHA", true); return; }
             if (!accessCode || !memberCode) { showToast("Enter both codes", true); return; }
-            let role = null;
-            if (memberCode === "AMI-021") role = "admin";
-            else if (memberCode === "OE1-266") role = "moderator";
-            else if (memberCode === "LAO-012") role = "leader";
-            else if (memberCode === "MEI-021") role = "member";
-            else { showToast("Invalid Member Code", true); return; }
-            const userDoc = await getDoc(doc(db, "users", accessCode));
-            if (!userDoc.exists()) { showToast("Access Code not found", true); return; }
-            const userData = userDoc.data();
-            if (userData.role !== role) { showToast("Member Code mismatch", true); return; }
-            currentUser = { accessCode, ...userData };
-            localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role }));
-            document.getElementById('authContainer').style.display = 'none';
-            document.getElementById('app').classList.remove('hidden');
-            document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
-            stopThree();
-            // load dashboard view (simplified for demo)
-            document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome, ${escapeHTML(userData.nickname || accessCode)}</h2><p>All features (global chat, private messages, Omnius AI, etc.) are fully implemented in the production version.</p></div>`;
-            document.getElementById('loginSound').play().catch(e=>null);
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessCode, memberCode, turnstileToken })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Login failed");
+                // After successful backend validation, load user data from Firestore (or trust the response)
+                const userDoc = await getDoc(doc(db, "users", accessCode));
+                if (!userDoc.exists()) throw new Error("User data missing");
+                currentUser = { accessCode, ...userDoc.data() };
+                localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: currentUser.role }));
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('app').classList.remove('hidden');
+                document.getElementById('userRoleBadge').innerText = currentUser.role.toUpperCase();
+                await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
+                stopLoading();
+                document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome, ${escapeHTML(currentUser.nickname || accessCode)}</h2><p>All features ready.</p></div>`;
+                document.getElementById('loginSound').play().catch(e=>null);
+            } catch(err) { showToast(err.message, true); }
         }
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
-        // --- Signup flow ---
+        // Signup step handlers (similar to before, but final signup uses backend)
         document.getElementById('validateMemberCodeBtn').onclick = () => {
             const memberCode = document.getElementById('signupMemberCode').value.trim();
             if (memberCode === "AMI-021") validatedRole = "admin";
@@ -447,18 +352,17 @@
             document.getElementById('signupStep2').style.display = 'block';
         };
 
-        // add security question
+        // Add security question
         document.getElementById('addQuestionBtn').onclick = () => {
             const containerDiv = document.getElementById('securityQuestionsContainer');
-            const idx = containerDiv.children.length + 1;
             const div = document.createElement('div');
             div.className = 'security-question-item';
-            div.innerHTML = `<input type="text" class="q-text" placeholder="Question ${idx}" style="width:100%; margin:5px 0; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;"><input type="text" class="a-text" placeholder="Answer" style="width:100%; margin-bottom:10px; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;">`;
+            div.innerHTML = `<input type="text" class="q-text" placeholder="Question" style="width:100%; margin:5px 0; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;"><input type="text" class="a-text" placeholder="Answer" style="width:100%; margin-bottom:10px; padding:8px; background:#1a1a1a; border:1px solid #333; color:white;">`;
             containerDiv.appendChild(div);
             document.getElementById('securityWarning').style.display = 'block';
         };
 
-        // final signup
+        // Final signup (sends to backend)
         document.getElementById('finalSignupBtn').onclick = async () => {
             const turnstileToken = getTurnstileToken();
             if (!turnstileToken) { showToast("Complete CAPTCHA", true); return; }
@@ -467,16 +371,6 @@
             const bio = document.getElementById('profileBio').value.trim();
             const birthday = document.getElementById('profileBirthday').value;
             const hobby = document.getElementById('profileHobby').value.trim();
-            // generate unique 9-digit access code
-            let accessCode;
-            let exists = true;
-            while (exists) {
-                const arr = new Uint32Array(1);
-                crypto.getRandomValues(arr);
-                accessCode = (arr[0] % 900000000 + 100000000).toString();
-                const docSnap = await getDoc(doc(db, "users", accessCode));
-                exists = docSnap.exists();
-            }
             // collect security questions
             const questionDivs = document.querySelectorAll('.security-question-item');
             const securityQuestions = [];
@@ -490,42 +384,43 @@
                     securityQuestions.push({ question: q, answerHash: hashHex });
                 }
             }
-            const userData = {
-                role: validatedRole,
-                communityId: tempCommunityId,
-                nickname,
-                realName,
-                bio,
-                birthday,
-                hobby,
-                loginHistory: [Date.now()],
-                createdAt: serverTimestamp(),
-                securityQuestions: securityQuestions.length ? securityQuestions : null,
-                online: true,
-                blockedUsers: [],
-                tester: false
-            };
-            await setDoc(doc(db, "users", accessCode), userData);
-            const fileInput = document.getElementById('signupProfilePic');
-            if (fileInput.files.length) {
-                const file = fileInput.files[0];
-                const storageRef = ref(storage, `profilePictures/${accessCode}`);
-                await uploadBytes(storageRef, file);
-                const photoURL = await getDownloadURL(storageRef);
-                await updateDoc(doc(db, "users", accessCode), { photoURL });
-            }
-            showToast(`Account created! Your Access Code: ${accessCode}. Save it.`);
-            // auto login
-            currentUser = { accessCode, ...userData };
-            localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: validatedRole }));
-            document.getElementById('authContainer').style.display = 'none';
-            document.getElementById('app').classList.remove('hidden');
-            document.getElementById('userRoleBadge').innerText = validatedRole.toUpperCase();
-            stopThree();
-            document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome, ${escapeHTML(nickname)}</h2><p>Your account is ready. Access Code: ${accessCode}</p></div>`;
+            // Prepare profile picture (upload after account creation)
+            const file = document.getElementById('signupProfilePic').files[0];
+            let photoURL = null;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        memberCode: validatedMemberCode,
+                        role: validatedRole,
+                        communityId: tempCommunityId,
+                        nickname, realName, bio, birthday, hobby,
+                        securityQuestions,
+                        turnstileToken
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Signup failed");
+                const accessCode = data.accessCode;
+                if (file) {
+                    const storageRef = ref(storage, `profilePictures/${accessCode}`);
+                    await uploadBytes(storageRef, file);
+                    photoURL = await getDownloadURL(storageRef);
+                    await updateDoc(doc(db, "users", accessCode), { photoURL });
+                }
+                showToast(`Account created! Your Access Code: ${accessCode}. Save it.`);
+                // Auto login after signup
+                localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: validatedRole }));
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('app').classList.remove('hidden');
+                document.getElementById('userRoleBadge').innerText = validatedRole.toUpperCase();
+                stopLoading();
+                document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome, ${escapeHTML(nickname)}</h2><p>Your Access Code: ${accessCode}</p></div>`;
+            } catch(err) { showToast(err.message, true); }
         };
 
-        // Recovery flow
+        // Recovery flow (unchanged but works with existing Firestore data)
         document.getElementById('forgotCodeLink').onclick = async (e) => {
             e.preventDefault();
             document.getElementById('recoveryModal').style.display = 'flex';
@@ -538,7 +433,7 @@
             if (!userDoc.exists()) { showToast("Access Code not found", true); return; }
             const userData = userDoc.data();
             const questions = userData.securityQuestions;
-            if (!questions || !questions.length) { showToast("No security questions set. Recovery impossible.", true); return; }
+            if (!questions || !questions.length) { showToast("No security questions set.", true); return; }
             const area = document.getElementById('recoveryQuestionsArea');
             area.innerHTML = '';
             for (let i=0; i<questions.length; i++) {
@@ -552,9 +447,7 @@
                 btn.className = "btn";
                 btn.onclick = () => {
                     const ans = [];
-                    for (let i=0; i<questions.length; i++) {
-                        ans.push(document.getElementById(`recAns${i}`).value.trim());
-                    }
+                    for (let i=0; i<questions.length; i++) ans.push(document.getElementById(`recAns${i}`).value.trim());
                     resolve(ans);
                 };
                 area.appendChild(btn);
@@ -583,7 +476,7 @@
             location.reload();
         };
 
-        // Check existing session
+        // Auto-login if session exists
         (async () => {
             const saved = localStorage.getItem('resistanceUser');
             if (saved) {
@@ -595,13 +488,11 @@
                     document.getElementById('app').classList.remove('hidden');
                     document.getElementById('userRoleBadge').innerText = role.toUpperCase();
                     await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
-                    stopThree();
+                    stopLoading();
                     document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome back, ${escapeHTML(currentUser.nickname || accessCode)}</h2><p>All features ready.</p></div>`;
-                } else {
-                    localStorage.removeItem('resistanceUser');
-                }
+                } else { localStorage.removeItem('resistanceUser'); }
             }
-            setTimeout(() => { if(document.getElementById('loadingCanvas')) stopThree(); }, 100);
+            setTimeout(() => stopLoading(), 100);
         })();
     </script>
 </body>
