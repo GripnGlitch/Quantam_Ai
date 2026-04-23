@@ -1,109 +1,92 @@
 import express from 'express';
 import cors from 'cors';
-import cron from 'node-cron';
 import admin from 'firebase-admin';
-import { deleteInactiveAccounts } from './utils/cron.js';
+import fetch from 'node-fetch';
+import crypto from 'crypto';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Firebase Admin SDK – expects service account JSON in environment variable
+// Firebase Admin SDK – from environment variable
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    console.error('Missing FIREBASE_SERVICE_ACCOUNT environment variable');
+    console.error('Missing FIREBASE_SERVICE_ACCOUNT');
     process.exit(1);
 }
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+const db = admin.firestore();
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json());
 
-const BYTEZ_KEY = process.env.BYTEZ_API_KEY;
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-const NAMING_MODELS = (process.env.NAMING_MODELS || 'openai/gpt-4o-mini,meta-llama/llama-3.2-3b-instruct,google/gemini-1.5-flash,anthropic/claude-3-haiku,deepseek/deepseek-chat').split(',');
+// Cloudflare Turnstile secret key (from your dashboard)
+const TURNSTILE_SECRET = "0x4AAAAAADB9qMDJUWYYG5CbJiniqawwDSY";
 
-const SYSTEM_PROMPT = `You are Omnius, an AI assistant with a deep heart and sharp mind. 
-Your purpose is to help users with empathy, wisdom, and care. Always answer thoughtfully – prioritise depth over speed. 
-Be kind, respectful, and never offensive.
-
-You have NO access to any Resistance group data. 
-If a user asks about private chats, announcements, user profiles, events, or any information belonging to the Resistance community, 
-you must politely refuse: "I do not have permission to see the users' chats."
-
-You do not store or remember any personal information unless the user explicitly asks you to (and even then, only within the same conversation). 
-You are not a therapist, but you can offer emotional support within your capabilities.
-
-Answer in the same language as the user. Keep your tone warm and human-like.
-
-If you need to reason, you may include a [Thinking] section before your final answer. Otherwise, just answer directly.`;
-
-async function callBytez(modelId, messages, stream) {
-    const payload = {
-        model: modelId,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        stream
-    };
-    const response = await fetch('https://api.bytez.com/v1/chat/completions', {
+// Helper function to verify Turnstile token
+async function verifyTurnstile(token) {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${BYTEZ_KEY}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `secret=${TURNSTILE_SECRET}&response=${token}`
     });
-    if (!response.ok) throw new Error(`Bytez error: ${response.status}`);
-    return response;
+    const data = await response.json();
+    return data.success === true;
 }
 
-async function callOpenRouter(modelId, messages) {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${OPENROUTER_KEY}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: modelId,
-            messages
-        })
-    });
-    if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
-    return response.json();
-}
+// Admin backdoor API key (store in environment variable)
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY || 'super-secret-admin-key-change-me';
 
-app.post('/api/chat', async (req, res) => {
-    const { model, messages, stream, task } = req.body;
-    if (task === 'naming') {
-        const randomModel = NAMING_MODELS[Math.floor(Math.random() * NAMING_MODELS.length)];
-        try {
-            const data = await callOpenRouter(randomModel, messages);
-            res.json(data);
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
-        return;
+// Middleware: validate admin API key
+function adminAuth(req, res, next) {
+    const key = req.headers['x-admin-key'];
+    if (!key || key !== ADMIN_API_KEY) {
+        return res.status(403).json({ error: 'Unauthorized' });
     }
+    next();
+}
+
+// Admin backdoor: inspect private messages
+app.post('/api/admin/inspect-messages', adminAuth, async (req, res) => {
+    const { targetAccessCode } = req.body;
+    if (!targetAccessCode) return res.status(400).json({ error: 'Missing targetAccessCode' });
+
     try {
-        const response = await callBytez(model, messages, stream);
-        if (stream) {
-            res.setHeader('Content-Type', 'text/event-stream');
-            response.body.pipe(res);
-        } else {
-            const data = await response.json();
-            res.json(data);
+        const chatsRef = db.collection('privateChats');
+        const snapshot = await chatsRef.get();
+        const messages = [];
+        for (const chatDoc of snapshot.docs) {
+            const chatData = chatDoc.data();
+            if (chatData.participants && chatData.participants.includes(targetAccessCode)) {
+                const msgsSnap = await chatDoc.ref.collection('messages').orderBy('timestamp').get();
+                msgsSnap.forEach(msg => {
+                    messages.push({ chatId: chatDoc.id, ...msg.data() });
+                });
+            }
         }
+        // Audit log
+        await db.collection('adminAuditLogs').add({
+            admin: req.headers['x-admin-id'] || 'unknown',
+            target: targetAccessCode,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            count: messages.length
+        });
+        res.json({ success: true, messages });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Schedule account deletion daily at 2 AM UTC
-cron.schedule('0 2 * * *', deleteInactiveAccounts);
+// Example login endpoint (with Turnstile verification)
+app.post('/api/auth/login', async (req, res) => {
+    const { accessCode, memberCode, turnstileToken } = req.body;
+    if (!turnstileToken || !(await verifyTurnstile(turnstileToken))) {
+        return res.status(400).json({ error: 'CAPTCHA verification failed' });
+    }
+    // ... rest of login logic (check memberCode, return JWT etc.)
+    res.json({ success: true });
+});
 
 app.get('/health', (req, res) => res.send('OK'));
 
-app.listen(PORT, () => {
-    console.log(`Resistance backend running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Resistance backend running on port ${PORT}`));
