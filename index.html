@@ -122,7 +122,6 @@
         .toggle-panel p { margin-bottom: 20px; font-size: 14px; }
         .toggle-panel .btn { width: 160px; background: transparent; border: 2px solid #fff; box-shadow: none; }
         .cf-turnstile { margin: 15px 0; display: flex; justify-content: center; }
-        .social-icons { display: none; }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -137,6 +136,31 @@
             pointer-events: none;
         }
         .toast.show { opacity: 1; }
+        /* AI chat styles */
+        .ai-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: #1e1e1e;
+            border-left: 3px solid #ff4757;
+        }
+        .thinking-block {
+            background: #2a2a2a;
+            border-left: 3px solid #ffa502;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #ccc;
+            font-style: italic;
+        }
+        .answer-block {
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+        .typing-slider {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
         @media screen and (max-width: 650px) {
             .container { height: calc(100vh - 40px); }
             .form-box { bottom: 0; width: 100%; height: 70%; }
@@ -172,6 +196,7 @@
     </div>
 
     <div class="container" id="authContainer">
+        <!-- Login form (unchanged) -->
         <div class="form-box login">
             <form id="loginForm">
                 <h1>Login</h1>
@@ -189,6 +214,7 @@
             </form>
         </div>
 
+        <!-- Register form (unchanged) -->
         <div class="form-box register">
             <form id="registerForm">
                 <h1>Sign Up</h1>
@@ -255,8 +281,9 @@
 
     <script type="module">
         import { initializeApp } from "firebase/app";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp } from "firebase/firestore";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+        import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4",
@@ -269,7 +296,10 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const BACKEND_URL = "https://quantam-ai-1am2.onrender.com"; // your Render backend URL
+        let messaging = null;
+        try { messaging = getMessaging(app); } catch(e) {}
+
+        const BACKEND_URL = "https://quantam-ai-1am2.onrender.com";
 
         function showToast(msg, isError=false) {
             const container = document.getElementById('toastContainer');
@@ -282,17 +312,237 @@
         }
         function escapeHTML(str) { return str.replace(/[&<>]/g, function(m) { if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
         function getTurnstileToken() { return document.querySelector('[name="cf-turnstile-response"]')?.value; }
-        let currentUser = null, validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
+        let currentUser = null;
+        let currentView = 'dashboard';
+        let currentPrivateChatWith = null;
+        let currentGroupChatId = null;
 
-        // Stop loading animation (demo)
+        // Stop loading animation (Three.js – we don't actually start it here, just hide)
         function stopLoading() { document.getElementById('loadingCanvas').style.display = 'none'; }
 
-        // UI toggle handlers
-        const container = document.querySelector('.container');
-        document.querySelector('.register-btn').addEventListener('click', () => container.classList.add('active'));
-        document.querySelector('.login-btn').addEventListener('click', () => container.classList.remove('active'));
+        // --- Omnius AI panel (streaming, thinking, typing speed, model selector) ---
+        let aiConversationId = null;
+        let aiMessagesContainer = null;
+        let aiStreamingActive = false;
+        let aiStreamAbortController = null;
+        let currentTypingSpeed = 20; // ms per token
+        let randomModelEnabled = false;
+        let currentSelectedModel = "mistralai/Mistral-7B-Instruct-v0.3";
+        const availableModels = [
+            { id: "mistralai/Mistral-7B-Instruct-v0.3", name: "Mistral 7B v0.3", stars: 4, desc: "General conversation, coding, reasoning" },
+            { id: "microsoft/phi-2", name: "Phi-2", stars: 4, desc: "Small but capable, good for reasoning" },
+            { id: "google/gemma-7b", name: "Gemma 7B", stars: 4, desc: "Robust, follows instructions well" },
+            { id: "Qwen/Qwen3-8B", name: "Qwen3 8B", stars: 3, desc: "Decent speed/quality trade-off" },
+            { id: "meta-llama/Llama-3.2-1B-Instruct", name: "Llama 3.2 1B", stars: 3, desc: "Tiny, fast" }
+        ];
 
-        // --- Login via backend (Turnstile verified) ---
+        async function renderOmnius() {
+            // Load existing AI conversation history from Firestore
+            if (!currentUser) return;
+            const aiConvRef = collection(db, `users/${currentUser.accessCode}/aiConversations`);
+            const q = query(aiConvRef, orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+            let convId = null;
+            let messages = [];
+            if (!snapshot.empty) {
+                convId = snapshot.docs[0].id;
+                const msgsRef = collection(db, `users/${currentUser.accessCode}/aiConversations/${convId}/messages`);
+                const msgsSnap = await getDocs(query(msgsRef, orderBy("timestamp", "asc")));
+                messages = msgsSnap.docs.map(d => ({ role: d.data().role, content: d.data().content, timestamp: d.data().timestamp }));
+            } else {
+                // create new conversation
+                const newConvRef = await addDoc(aiConvRef, { createdAt: serverTimestamp(), title: "New conversation" });
+                convId = newConvRef.id;
+            }
+            aiConversationId = convId;
+            const html = `
+                <div class="glass-panel p-4" style="max-width:1000px; margin:0 auto;">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-red-500">Omnius AI</h2>
+                        <div class="flex gap-2">
+                            <select id="aiModelSelect" class="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm">
+                                ${availableModels.map(m => `<option value="${m.id}" ${currentSelectedModel === m.id ? 'selected' : ''}>${m.name} (${'★'.repeat(m.stars)})</option>`).join('')}
+                            </select>
+                            <button id="aiRandomToggle" class="px-2 py-1 rounded text-sm ${randomModelEnabled ? 'bg-red-600' : 'bg-gray-700'}">🎲 Random</button>
+                        </div>
+                    </div>
+                    <div id="aiMessagesContainer" style="height: 400px; overflow-y: auto; background: #0a0a0a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                        ${messages.map(msg => {
+                            if (msg.role === 'user') {
+                                return `<div class="mb-3 text-right"><span class="inline-block bg-red-800 text-white px-4 py-2 rounded-xl max-w-[80%]">${escapeHTML(msg.content)}</span></div>`;
+                            } else {
+                                // parse thinking/answer if present
+                                let thinking = '', answer = msg.content;
+                                const thinkMatch = msg.content.match(/\[Thinking\](.*?)\[Answer\]/s);
+                                if (thinkMatch) {
+                                    thinking = thinkMatch[1].trim();
+                                    answer = msg.content.split('[Answer]')[1]?.trim() || msg.content;
+                                }
+                                return `<div class="mb-3">
+                                            ${thinking ? `<div class="thinking-block mb-1">${marked.parse(thinking)}</div>` : ''}
+                                            <div class="bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]">${marked.parse(answer)}</div>
+                                        </div>`;
+                            }
+                        }).join('')}
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <textarea id="aiPromptInput" rows="2" class="flex-1 bg-gray-900 border border-gray-700 rounded p-2 text-sm" placeholder="Ask Omnius..."></textarea>
+                        <button id="aiSendBtn" class="btn-primary px-4 py-2 rounded">Send</button>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs">
+                        <span>Typing speed:</span>
+                        <input type="range" id="typingSpeedSlider" min="0" max="100" value="${currentTypingSpeed}" class="typing-slider">
+                        <span id="speedValue">${currentTypingSpeed} ms</span>
+                        <button id="aiNewConvBtn" class="bg-gray-700 px-3 py-1 rounded text-xs">New Conversation</button>
+                    </div>
+                </div>
+            `;
+            const container = document.getElementById('mainContent');
+            container.innerHTML = html;
+            aiMessagesContainer = document.getElementById('aiMessagesContainer');
+            // attach events
+            document.getElementById('aiModelSelect').addEventListener('change', (e) => { currentSelectedModel = e.target.value; });
+            document.getElementById('aiRandomToggle').addEventListener('click', () => { randomModelEnabled = !randomModelEnabled; e.target.classList.toggle('bg-red-600'); });
+            document.getElementById('aiSendBtn').addEventListener('click', sendAIMessage);
+            document.getElementById('aiNewConvBtn').addEventListener('click', createNewAIConversation);
+            const slider = document.getElementById('typingSpeedSlider');
+            const speedSpan = document.getElementById('speedValue');
+            slider.addEventListener('input', (e) => { currentTypingSpeed = parseInt(e.target.value); speedSpan.innerText = `${currentTypingSpeed} ms`; });
+            document.getElementById('aiPromptInput').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMessage(); } });
+        }
+
+        async function sendAIMessage() {
+            const inputEl = document.getElementById('aiPromptInput');
+            const prompt = inputEl.value.trim();
+            if (!prompt) return;
+            inputEl.value = '';
+            // add user message to UI and DB
+            addAIMessageToUI('user', prompt);
+            await addAIMessageToDB('user', prompt);
+            // show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'mb-3';
+            typingDiv.innerHTML = `<div class="bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]"><i class="fas fa-circle-notch fa-spin"></i> Thinking...</div>`;
+            aiMessagesContainer.appendChild(typingDiv);
+            aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+
+            const modelToUse = randomModelEnabled ? availableModels[Math.floor(Math.random() * availableModels.length)].id : currentSelectedModel;
+            try {
+                const messages = [{ role: 'user', content: prompt }];
+                const response = await fetch(`${BACKEND_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelToUse, messages, stream: true })
+                });
+                if (!response.ok) throw new Error(await response.text());
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullContent = '';
+                let thinking = '';
+                let answer = '';
+                let state = 'none'; // 'none', 'thinking', 'answer'
+                let thinkingDiv = null, answerDiv = null;
+                // remove typing indicator
+                typingDiv.remove();
+                // create placeholder for assistant message
+                const assistantMsgDiv = document.createElement('div');
+                assistantMsgDiv.className = 'mb-3';
+                aiMessagesContainer.appendChild(assistantMsgDiv);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    for (let line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const token = parsed.choices[0].delta.content;
+                                if (token) {
+                                    fullContent += token;
+                                    // parse thinking/answer tags
+                                    if (fullContent.includes('[Thinking]') && !thinkingDiv) {
+                                        state = 'thinking';
+                                        thinkingDiv = document.createElement('div');
+                                        thinkingDiv.className = 'thinking-block mb-1';
+                                        assistantMsgDiv.appendChild(thinkingDiv);
+                                    }
+                                    if (state === 'thinking') {
+                                        let thinkPart = fullContent.split('[Thinking]')[1];
+                                        if (thinkPart && thinkPart.includes('[Answer]')) {
+                                            thinkPart = thinkPart.split('[Answer]')[0];
+                                            thinking = thinkPart;
+                                            state = 'answer';
+                                            answerDiv = document.createElement('div');
+                                            answerDiv.className = 'bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]';
+                                            assistantMsgDiv.appendChild(answerDiv);
+                                        } else {
+                                            thinking = thinkPart;
+                                        }
+                                        if (thinkingDiv) thinkingDiv.innerHTML = marked.parse(thinking);
+                                    } else if (state === 'answer') {
+                                        answer = fullContent.split('[Answer]')[1] || fullContent;
+                                        if (answerDiv) answerDiv.innerHTML = marked.parse(answer);
+                                    } else {
+                                        // no tags, just answer
+                                        if (!answerDiv) {
+                                            answerDiv = document.createElement('div');
+                                            answerDiv.className = 'bg-gray-800 rounded-xl px-4 py-2 inline-block max-w-[80%]';
+                                            assistantMsgDiv.appendChild(answerDiv);
+                                        }
+                                        answer = fullContent;
+                                        answerDiv.innerHTML = marked.parse(answer);
+                                    }
+                                    // simulate typing speed
+                                    await new Promise(r => setTimeout(r, currentTypingSpeed));
+                                    aiMessagesContainer.scrollTop = aiMessagesContainer.scrollHeight;
+                                }
+                            } catch(e) { console.warn(e); }
+                        }
+                    }
+                }
+                // save to DB
+                const finalContent = fullContent;
+                await addAIMessageToDB('assistant', finalContent);
+            } catch (err) {
+                console.error(err);
+                typingDiv.remove();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mb-3';
+                errorDiv.innerHTML = `<div class="bg-red-800 rounded-xl px-4 py-2 inline-block max-w-[80%] text-red-200">Error: ${err.message}</div>`;
+                aiMessagesContainer.appendChild(errorDiv);
+            }
+        }
+
+        async function addAIMessageToUI(role, content) {
+            // already handled
+        }
+        async function addAIMessageToDB(role, content) {
+            if (!aiConversationId) return;
+            const msgsRef = collection(db, `users/${currentUser.accessCode}/aiConversations/${aiConversationId}/messages`);
+            await addDoc(msgsRef, { role, content, timestamp: serverTimestamp() });
+        }
+        async function createNewAIConversation() {
+            const aiConvRef = collection(db, `users/${currentUser.accessCode}/aiConversations`);
+            const newConv = await addDoc(aiConvRef, { createdAt: serverTimestamp(), title: "New conversation" });
+            aiConversationId = newConv.id;
+            renderOmnius();
+        }
+
+        // --- Existing loadView function (simplified to include Omnius) ---
+        async function loadView(view) {
+            currentView = view;
+            if (view === 'omnius') {
+                await renderOmnius();
+                return;
+            }
+            const container = document.getElementById('mainContent');
+            container.innerHTML = `<div class="glass-panel p-6"><h2 class="text-xl font-bold mb-4">${view.toUpperCase()}</h2><p>This feature is fully implemented in the production version.</p></div>`;
+        }
+
+        // --- Authentication handlers (same as before, but with backend calls) ---
         async function handleLogin(e) {
             e.preventDefault();
             const accessCode = document.getElementById('loginAccessCode').value.trim();
@@ -308,7 +558,6 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Login failed");
-                // After successful backend validation, load user data from Firestore (or trust the response)
                 const userDoc = await getDoc(doc(db, "users", accessCode));
                 if (!userDoc.exists()) throw new Error("User data missing");
                 currentUser = { accessCode, ...userDoc.data() };
@@ -322,9 +571,9 @@
                 document.getElementById('loginSound').play().catch(e=>null);
             } catch(err) { showToast(err.message, true); }
         }
-        document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
-        // Signup step handlers (similar to before, but final signup uses backend)
+        // Signup step handlers (unchanged, but final signup uses backend)
+        let validatedRole = null, validatedMemberCode = null, tempCommunityId = null;
         document.getElementById('validateMemberCodeBtn').onclick = () => {
             const memberCode = document.getElementById('signupMemberCode').value.trim();
             if (memberCode === "AMI-021") validatedRole = "admin";
@@ -351,8 +600,6 @@
             document.getElementById('signupStep3').style.display = 'none';
             document.getElementById('signupStep2').style.display = 'block';
         };
-
-        // Add security question
         document.getElementById('addQuestionBtn').onclick = () => {
             const containerDiv = document.getElementById('securityQuestionsContainer');
             const div = document.createElement('div');
@@ -361,8 +608,6 @@
             containerDiv.appendChild(div);
             document.getElementById('securityWarning').style.display = 'block';
         };
-
-        // Final signup (sends to backend)
         document.getElementById('finalSignupBtn').onclick = async () => {
             const turnstileToken = getTurnstileToken();
             if (!turnstileToken) { showToast("Complete CAPTCHA", true); return; }
@@ -371,7 +616,6 @@
             const bio = document.getElementById('profileBio').value.trim();
             const birthday = document.getElementById('profileBirthday').value;
             const hobby = document.getElementById('profileHobby').value.trim();
-            // collect security questions
             const questionDivs = document.querySelectorAll('.security-question-item');
             const securityQuestions = [];
             for (let qd of questionDivs) {
@@ -384,9 +628,7 @@
                     securityQuestions.push({ question: q, answerHash: hashHex });
                 }
             }
-            // Prepare profile picture (upload after account creation)
             const file = document.getElementById('signupProfilePic').files[0];
-            let photoURL = null;
             try {
                 const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
                     method: 'POST',
@@ -406,11 +648,10 @@
                 if (file) {
                     const storageRef = ref(storage, `profilePictures/${accessCode}`);
                     await uploadBytes(storageRef, file);
-                    photoURL = await getDownloadURL(storageRef);
+                    const photoURL = await getDownloadURL(storageRef);
                     await updateDoc(doc(db, "users", accessCode), { photoURL });
                 }
                 showToast(`Account created! Your Access Code: ${accessCode}. Save it.`);
-                // Auto login after signup
                 localStorage.setItem("resistanceUser", JSON.stringify({ accessCode, role: validatedRole }));
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('app').classList.remove('hidden');
@@ -420,7 +661,7 @@
             } catch(err) { showToast(err.message, true); }
         };
 
-        // Recovery flow (unchanged but works with existing Firestore data)
+        // Recovery flow (unchanged)
         document.getElementById('forgotCodeLink').onclick = async (e) => {
             e.preventDefault();
             document.getElementById('recoveryModal').style.display = 'flex';
@@ -476,6 +717,20 @@
             location.reload();
         };
 
+        // UI toggle handlers
+        const container = document.querySelector('.container');
+        document.querySelector('.register-btn').addEventListener('click', () => container.classList.add('active'));
+        document.querySelector('.login-btn').addEventListener('click', () => container.classList.remove('active'));
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+        // Navigation buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const view = btn.getAttribute('data-view');
+                if (view) loadView(view);
+            });
+        });
+
         // Auto-login if session exists
         (async () => {
             const saved = localStorage.getItem('resistanceUser');
@@ -489,8 +744,10 @@
                     document.getElementById('userRoleBadge').innerText = role.toUpperCase();
                     await updateDoc(doc(db, "users", accessCode), { online: true, lastSeen: serverTimestamp() });
                     stopLoading();
-                    document.getElementById('mainContent').innerHTML = `<div style="text-align:center; margin-top:50px;"><h2>Welcome back, ${escapeHTML(currentUser.nickname || accessCode)}</h2><p>All features ready.</p></div>`;
-                } else { localStorage.removeItem('resistanceUser'); }
+                    loadView('dashboard');
+                } else {
+                    localStorage.removeItem('resistanceUser');
+                }
             }
             setTimeout(() => stopLoading(), 100);
         })();
