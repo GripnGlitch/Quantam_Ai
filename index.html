@@ -6,9 +6,8 @@
   <title>Resistance</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgo=">
-  <!-- Turnstile site key (can be overridden via meta) -->
   <meta name="turnstile-sitekey" content="0x4AAAAAADB9qB6YsaSUFV0q">
-  <!-- CDNs -->
+  <!-- Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -21,144 +20,294 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* Dark aesthetic preserved exactly */
-    * { font-family: 'Poppins', sans-serif; box-sizing: border-box; margin:0; padding:0; }
-    body { background: #000; color: #fff; overflow-x: hidden; }
-    ::-webkit-scrollbar { width:6px; }
-    ::-webkit-scrollbar-track { background:transparent; }
-    ::-webkit-scrollbar-thumb { background:#333; border-radius:3px; }
-    #loadingCanvas { position:fixed; inset:0; background:#000; display:flex; justify-content:center; align-items:center; z-index:9999; }
-    #loadingCanvas h1 { color:#ff3131; font-size:3rem; font-weight:800; animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(1.05);} 100%{opacity:1;transform:scale(1);} }
-    #app { display:none; }
-    .glass { background:rgba(18,18,18,0.75); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; }
-    .btn-red { background:linear-gradient(135deg,#b91c1c,#dc2626); color:#fff; border:none; padding:12px 28px; border-radius:8px; cursor:pointer; font-weight:600; transition:0.2s; }
-    .btn-red:hover { transform:scale(1.02); box-shadow:0 0 15px rgba(220,38,38,0.5); }
-    .btn-outline { background:transparent; border:2px solid #ff3131; color:#ff3131; padding:8px 20px; border-radius:8px; cursor:pointer; transition:0.2s; }
-    .btn-outline:hover { background:#ff3131; color:#000; }
-    .input-dark { background:#111; border:1px solid #333; border-radius:8px; padding:12px 16px; color:#eee; width:100%; outline:none; transition:border 0.2s; }
-    .input-dark:focus { border-color:#ff3131; }
-    .sidebar { width:260px; background:#0a0a0a; border-right:1px solid #1a1a1a; transition:transform 0.3s; z-index:50; }
-    .nav-btn { width:100%; padding:12px 20px; text-align:left; background:transparent; color:#ccc; border:none; cursor:pointer; display:flex; align-items:center; font-size:14px; transition:0.2s; }
-    .nav-btn i { width:20px; margin-right:10px; }
-    .nav-btn:hover, .nav-btn.active { background:#1a1a1a; color:#ff3131; border-left:3px solid #ff3131; }
-    .thinking-block { background:rgba(75,85,99,0.2); border-left:4px solid #6b7280; padding:12px; margin:8px 0; font-style:italic; color:#9ca3af; border-radius:0 8px 8px 0; }
-    .online-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
-    .online-dot.online { background:#10b981; box-shadow:0 0 6px #10b981; }
-    .online-dot.offline { background:#4b5563; }
-    .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:14px 28px; border-radius:8px; z-index:10000; animation:toastFade 3s forwards; font-weight:500; }
-    .toast.error { background:#7f1d1d; }
-    @keyframes toastFade { 0%{opacity:0;bottom:10px;} 10%{opacity:1;bottom:20px;} 90%{opacity:1;bottom:20px;} 100%{opacity:0;bottom:10px;} }
-    #errorDisplay { position:fixed; bottom:0; left:0; right:0; background:#b91c1c; color:#fff; padding:8px; text-align:center; z-index:10001; display:none; }
-    @media (max-width:767px) { .sidebar { position:fixed; height:100%; transform:translateX(-100%); } .sidebar.open { transform:translateX(0); } }
+    /* ---------- Global & Ripple Animation ---------- */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    body { background: #000; user-select: none; }
+    #loadingCanvas { position: fixed; inset: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+    #loadingCanvas h1 { color: #ff3131; font-size: 3rem; font-weight: 800; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+    #app { display: none; width: 100%; height: 100vh; }
+    .sidebar { width: 260px; background: #0a0a0a; border-right: 1px solid #1a1a1a; overflow-y: auto; }
+    .nav-btn { width: 100%; padding: 12px 20px; text-align: left; background: transparent; color: #ccc; border: none; cursor: pointer; display: flex; align-items: center; font-size: 14px; transition: 0.2s; position: relative; overflow: hidden; }
+    .nav-btn::after { pointer-events: none; z-index: 0; }
+    .nav-btn > * { position: relative; z-index: 1; }
+    .nav-btn i { width: 20px; margin-right: 10px; }
+    .nav-btn:hover, .nav-btn.active { background: #1a1a1a; color: #ff3131; border-left: 3px solid #ff3131; }
+    .thinking-block { background: rgba(75,85,99,0.2); border-left: 4px solid #6b7280; padding: 12px; margin: 8px 0; font-style: italic; color: #9ca3af; border-radius: 0 8px 8px 0; }
+    .online-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .online-dot.online { background: #10b981; box-shadow: 0 0 6px #10b981; }
+    .online-dot.offline { background: #4b5563; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 14px 28px; border-radius: 8px; z-index: 10000; animation: toastFade 3s forwards; font-weight: 500; }
+    .toast.error { background: #7f1d1d; }
+    @keyframes toastFade { 0% { opacity: 0; bottom: 10px; } 10% { opacity: 1; bottom: 20px; } 90% { opacity: 1; bottom: 20px; } 100% { opacity: 0; bottom: 10px; } }
+    #errorDisplay { position: fixed; bottom: 0; left: 0; right: 0; background: #b91c1c; color: #fff; padding: 8px; text-align: center; z-index: 10001; display: none; }
+
+    /* Ripple effect class */
+    .ripple {
+      --duration: 600;
+      --size: 2;
+      --opacity: 0.25;
+      --easing: cubic-bezier(0.2, 0.4, 0.4, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      border-radius: 50%;
+      background: white;
+      width: calc(var(--width) * var(--size) * 1px);
+      height: calc(var(--width) * var(--size) * 1px);
+      left: calc(var(--clientX) * 1px - (var(--width) * var(--size) * 1px) / 2);
+      top: calc(var(--clientY) * 1px - (var(--width) * var(--size) * 1px) / 2);
+      transform: scale(var(--tapped, 0));
+      opacity: calc((1 - var(--tapped, 0)) * var(--opacity));
+      transition: transform calc(var(--duration) * 1ms * var(--tapped, 0)) var(--easing),
+                  opacity calc(var(--duration) * 1ms * var(--tapped, 0)) var(--easing);
+      z-index: 0;
+    }
+    .ripple > * { position: relative; z-index: 1; }
+
+    /* Buttons with ripple */
+    .btn, .btn-red, .btn-outline { cursor: pointer; border: none; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-red { background: linear-gradient(135deg, #b91c1c, #dc2626); color: #fff; padding: 12px 28px; border-radius: 8px; }
+    .btn-outline { background: transparent; border: 2px solid #ff3131; color: #ff3131; padding: 8px 20px; border-radius: 8px; }
+    .btn-red:hover, .btn-outline:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(220,38,38,0.5); }
+
+    /* Auth container toggle design */
+    .container {
+      position: relative;
+      width: 850px;
+      height: 550px;
+      background: #0a0a0a;
+      border-radius: 30px;
+      box-shadow: 0 0 30px rgba(255,0,0,0.15);
+      overflow: hidden;
+      border: 1px solid rgba(255,60,60,0.2);
+      margin: auto;
+    }
+    .form-box {
+      position: absolute;
+      right: 0;
+      width: 50%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e0e0e0;
+      text-align: center;
+      padding: 40px;
+      z-index: 1;
+      transition: 0.6s ease-in-out 1.2s, visibility 0s 1s;
+    }
+    .container.active .form-box { right: 50%; }
+    .form-box.register { visibility: hidden; }
+    .container.active .form-box.register { visibility: visible; }
+    .form-box form { width: 100%; }
+    .form-box h1 { font-size: 36px; margin: -10px 0; color: #ff4757; font-weight: 700; }
+    .input-box { position: relative; margin: 30px 0; }
+    .input-box input, .input-box select, .input-box textarea {
+      width: 100%;
+      padding: 13px 50px 13px 20px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      border: 1px solid #333;
+      outline: none;
+      font-size: 16px;
+      color: #f0f0f0;
+    }
+    .input-box input:focus, .input-box select:focus { border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
+    .input-box i { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 20px; color: #ff4757; }
+    .forgot-link { margin: -15px 0 15px; text-align: right; }
+    .forgot-link a { font-size: 14px; color: #aaa; }
+    .cf-turnstile { margin: 15px 0; display: flex; justify-content: center; }
+
+    .toggle-box { position: absolute; width: 100%; height: 100%; }
+    .toggle-box::before {
+      content: "";
+      position: absolute;
+      left: -250%;
+      width: 300%;
+      height: 100%;
+      background: linear-gradient(135deg, #aa2e78, #ff4757);
+      border-radius: 150px;
+      z-index: 2;
+      transition: 1.8s ease-in-out;
+    }
+    .container.active .toggle-box::before { left: 50%; }
+    .toggle-panel {
+      position: absolute;
+      width: 50%;
+      height: 100%;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+      transition: 0.6s ease-in-out;
+    }
+    .toggle-panel.toggle-left { left: 0; transition-delay: 1.2s; }
+    .container.active .toggle-panel.toggle-left { left: -50%; transition-delay: 0.6s; }
+    .toggle-panel.toggle-right { right: -50%; transition-delay: 0.6s; }
+    .container.active .toggle-panel.toggle-right { right: 0; transition-delay: 1.2s; }
+    .toggle-panel p { margin-bottom: 20px; font-size: 14px; }
+    .toggle-panel .btn { width: 160px; }
+
+    @media screen and (max-width: 650px) {
+      .container { height: calc(100vh - 40px); }
+      .form-box { bottom: 0; width: 100%; height: 70%; }
+      .container.active .form-box { right: 0; bottom: 30%; }
+      .toggle-box::before { left: 0; top: -270%; width: 100%; height: 300%; border-radius: 20vw; }
+      .container.active .toggle-box::before { left: 0; top: 70%; }
+      .toggle-panel { width: 100%; height: 30%; }
+      .toggle-panel.toggle-left { top: 0; }
+      .container.active .toggle-panel.toggle-left { left: 0; top: -30%; }
+      .toggle-panel.toggle-right { right: 0; bottom: -30%; }
+      .container.active .toggle-panel.toggle-right { bottom: 0; }
+      .sidebar { position: fixed; height: 100%; z-index: 100; transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar.open { transform: translateX(0); }
+    }
   </style>
 </head>
 <body>
   <div id="loadingCanvas"><h1>RESISTANCE</h1></div>
   <div id="errorDisplay"></div>
 
-  <div id="app" class="flex h-screen">
+  <div id="app" class="flex">
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar flex flex-col p-4 h-full">
+    <div id="sidebar" class="sidebar flex flex-col p-4">
       <h2 class="text-red-500 text-2xl font-bold mb-8">RESISTANCE</h2>
-      <button class="nav-btn" data-view="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</button>
-      <button class="nav-btn" data-view="profile"><i class="fas fa-user-circle"></i> Profile</button>
-      <button class="nav-btn" data-view="global-chat"><i class="fas fa-globe-americas"></i> Global Chat</button>
-      <button class="nav-btn" data-view="community-chat"><i class="fas fa-users"></i> Community</button>
-      <button class="nav-btn" data-view="private-chat"><i class="fas fa-lock"></i> Private</button>
-      <button class="nav-btn" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</button>
-      <button class="nav-btn" data-view="events"><i class="fas fa-calendar-week"></i> Events</button>
-      <button class="nav-btn" data-view="files"><i class="fas fa-file-alt"></i> Files</button>
-      <button class="nav-btn" data-view="polls"><i class="fas fa-poll"></i> Polls</button>
-      <button class="nav-btn" data-view="translator"><i class="fas fa-language"></i> Translator</button>
-      <button class="nav-btn" data-view="omnius"><i class="fas fa-robot"></i> Omnius AI</button>
-      <button class="nav-btn" data-view="settings"><i class="fas fa-cog"></i> Settings</button>
+      <button class="nav-btn ripple" data-view="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></button>
+      <button class="nav-btn ripple" data-view="profile"><i class="fas fa-user-circle"></i> <span>Profile</span></button>
+      <button class="nav-btn ripple" data-view="global-chat"><i class="fas fa-globe-americas"></i> <span>Global Chat</span></button>
+      <button class="nav-btn ripple" data-view="community-chat"><i class="fas fa-users"></i> <span>Community</span></button>
+      <button class="nav-btn ripple" data-view="private-chat"><i class="fas fa-lock"></i> <span>Private</span></button>
+      <button class="nav-btn ripple" data-view="announcements"><i class="fas fa-bullhorn"></i> <span>Announcements</span></button>
+      <button class="nav-btn ripple" data-view="events"><i class="fas fa-calendar-week"></i> <span>Events</span></button>
+      <button class="nav-btn ripple" data-view="files"><i class="fas fa-file-alt"></i> <span>Files</span></button>
+      <button class="nav-btn ripple" data-view="polls"><i class="fas fa-poll"></i> <span>Polls</span></button>
+      <button class="nav-btn ripple" data-view="translator"><i class="fas fa-language"></i> <span>Translator</span></button>
+      <button class="nav-btn ripple" data-view="omnius"><i class="fas fa-robot"></i> <span>Omnius AI</span></button>
+      <button class="nav-btn ripple" data-view="settings"><i class="fas fa-cog"></i> <span>Settings</span></button>
       <div class="mt-auto">
-        <button id="logoutBtn" class="nav-btn text-red-400"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        <button id="logoutBtn" class="nav-btn ripple text-red-400"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></button>
       </div>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col h-full overflow-hidden" id="mainWrapper">
-      <div class="md:hidden p-4 bg-black/80 backdrop-blur flex items-center justify-between">
-        <button id="sidebarToggle" class="text-white text-2xl"><i class="fas fa-bars"></i></button>
+    <div class="flex-1 flex flex-col">
+      <div class="md:hidden p-4 bg-black/80 flex items-center justify-between">
+        <button id="sidebarToggle" class="text-white text-2xl ripple"><i class="fas fa-bars"></i></button>
         <span id="roleBadgeMobile" class="px-3 py-1 bg-red-800 rounded-full text-sm font-semibold"></span>
       </div>
       <div id="mainContent" class="flex-1 overflow-y-auto p-4 md:p-6"></div>
     </div>
   </div>
 
-  <!-- Auth Container -->
-  <div id="authContainer" class="fixed inset-0 bg-black flex justify-center items-center p-4" style="z-index:9998;">
-    <!-- Login Form -->
-    <div id="loginForm" class="glass p-8 max-w-md w-full">
-      <h2 class="text-3xl font-bold text-red-500 mb-6 text-center">Login</h2>
-      <input id="loginAccessCode" class="input-dark mb-4" placeholder="Access Code (9 digits)" maxlength="9" inputmode="numeric">
-      <input id="loginMemberCode" class="input-dark mb-4" placeholder="Member Code" maxlength="7">
-      <div id="loginCaptcha" class="cf-turnstile mb-4" data-sitekey="0x4AAAAAADB9qB6YsaSUFV0q"></div>
-      <button id="loginSubmit" class="btn-red w-full py-3">Login</button>
-      <p class="text-center mt-4 text-gray-400">No account? <a id="goToSignup" class="text-red-500 cursor-pointer hover:underline">Sign Up</a></p>
-      <p class="text-center text-gray-500 mt-2"><span id="forgotCode" class="cursor-pointer hover:text-red-400">Forgot Member Code?</span></p>
+  <!-- Auth Container (toggle design) -->
+  <div class="container" id="authContainer">
+    <div class="form-box login">
+      <form id="loginForm">
+        <h1>Login</h1>
+        <div class="input-box"><input type="text" id="loginAccessCode" placeholder="Access Code" maxlength="9" inputmode="numeric"><i class="fas fa-user"></i></div>
+        <div class="input-box"><input type="password" id="loginMemberCode" placeholder="Member Code"><i class="fas fa-lock"></i></div>
+        <div id="loginCaptcha" class="cf-turnstile" data-sitekey="0x4AAAAAADB9qB6YsaSUFV0q"></div>
+        <div class="forgot-link"><a href="#" id="forgotCodeLink">Forgot Member Code?</a></div>
+        <button type="submit" class="btn-red ripple w-full"><span>Login</span></button>
+      </form>
+      <p class="text-gray-400 mt-4 text-sm">No account? <a id="goToSignup" class="text-red-500 cursor-pointer">Sign Up</a></p>
     </div>
 
-    <!-- Signup Form (3-step) -->
-    <div id="signupForm" class="glass p-8 max-w-md w-full" style="display:none;">
-      <h2 class="text-3xl font-bold text-red-500 mb-6 text-center">Sign Up</h2>
-      <div id="signupStep1">
-        <input id="signupMemberCode" class="input-dark mb-4" placeholder="Member Code" maxlength="7">
-        <button id="validateMemberCode" class="btn-red w-full py-3">Validate</button>
-      </div>
-      <div id="signupStep2" style="display:none;">
-        <select id="communitySelect" class="input-dark mb-4">
-          <option value="">Select Community</option>
-          <option value="VibeVault">Vibe Vault</option>
-          <option value="Onyx">Onyx</option>
-          <option value="RTCS">R.T.C.S</option>
-          <option value="MTT">M.T.T</option>
-        </select>
-        <button id="signupNext" class="btn-red w-full py-3">Next</button>
-        <button id="backToStep1" class="mt-2 w-full text-gray-400">← Back</button>
-      </div>
-      <div id="signupStep3" style="display:none;">
-        <input id="signupNickname" class="input-dark mb-3" placeholder="Nickname *">
-        <input id="signupRealName" class="input-dark mb-3" placeholder="Real Name">
-        <textarea id="signupBio" class="input-dark mb-3" rows="2" placeholder="Bio"></textarea>
-        <input id="signupBirthday" class="input-dark mb-3" type="date">
-        <input id="signupHobby" class="input-dark mb-3" placeholder="Hobby">
-        <label class="text-sm text-gray-400 block mb-1">Profile Picture</label>
-        <input type="file" id="profilePicInput" accept="image/*" class="mb-3 text-sm">
-        <div class="mb-4"><p class="text-gray-400 text-sm mb-2">Security Questions (for recovery)</p><div id="secQuestionsList"></div><button id="addSecQuestion" class="text-red-400 text-sm">+ Add question</button></div>
-        <div id="signupCaptcha" class="cf-turnstile mb-4" data-sitekey="0x4AAAAAADB9qB6YsaSUFV0q"></div>
-        <button id="createAccount" class="btn-red w-full py-3">Create Account</button>
-        <button id="backToStep2" class="mt-2 w-full text-gray-400">← Back</button>
-      </div>
+    <div class="form-box register">
+      <form id="registerForm">
+        <h1>Sign Up</h1>
+        <div id="signupStep1">
+          <div class="input-box"><input type="password" id="signupMemberCode" placeholder="Member Code"><i class="fas fa-lock"></i></div>
+          <button type="button" id="validateMemberCode" class="btn-red ripple w-full"><span>Validate & Continue</span></button>
+        </div>
+        <div id="signupStep2" style="display:none;">
+          <div class="input-box"><select id="communitySelect"><option value="">-- Select Community --</option><option value="VibeVault">Vibe Vault</option><option value="Onyx">Onyx</option><option value="RTCS">R.T.C.S</option><option value="MTT">M.T.T</option></select></div>
+          <button type="button" id="signupNext" class="btn-red ripple w-full"><span>Next: Profile</span></button>
+          <button type="button" id="backToStep1" class="btn-outline ripple w-full mt-2"><span>← Back</span></button>
+        </div>
+        <div id="signupStep3" style="display:none;">
+          <div class="input-box"><input type="text" id="signupNickname" placeholder="Nickname *"><i class="fas fa-user"></i></div>
+          <div class="input-box"><input type="text" id="signupRealName" placeholder="Real Name"><i class="fas fa-id-card"></i></div>
+          <div class="input-box"><textarea id="signupBio" rows="2" placeholder="Bio"></textarea></div>
+          <div class="input-box"><input type="date" id="signupBirthday"><i class="fas fa-calendar"></i></div>
+          <div class="input-box"><input type="text" id="signupHobby" placeholder="Hobby"><i class="fas fa-heart"></i></div>
+          <div class="input-box"><input type="file" id="profilePicInput" accept="image/*"><i class="fas fa-image"></i></div>
+          <div id="securityQuestionsContainer" class="mb-4">
+            <p class="text-gray-400 text-sm mb-2">Security Questions (for recovery)</p>
+            <div id="secQuestionsList"></div>
+            <button type="button" id="addSecQuestion" class="text-red-400 text-sm ripple"><i class="fas fa-plus mr-1"></i><span>Add question</span></button>
+          </div>
+          <div id="signupCaptcha" class="cf-turnstile"></div>
+          <button type="button" id="createAccount" class="btn-red ripple w-full"><span>Create Account</span></button>
+          <button type="button" id="backToStep2" class="btn-outline ripple w-full mt-2"><span>← Back</span></button>
+        </div>
+      </form>
     </div>
 
-    <!-- Recovery Modal -->
-    <div id="recoveryModal" class="fixed inset-0 bg-black/80 flex justify-center items-center z-50" style="display:none;">
-      <div class="glass p-8 max-w-md w-full">
-        <h2 class="text-2xl font-bold text-red-500 mb-4">Recover Member Code</h2>
-        <input id="recoveryAccessCode" class="input-dark mb-4" placeholder="Your Access Code">
-        <div id="recoveryQuestions"></div>
-        <button id="recoverySubmit" class="btn-red w-full py-3 mt-4">Recover</button>
-        <button id="closeRecovery" class="mt-2 w-full text-gray-400">Cancel</button>
+    <div class="toggle-box">
+      <div class="toggle-panel toggle-left">
+        <h1>Hello, Resistance!</h1>
+        <p>Don't have an account?</p>
+        <button class="btn register-btn ripple"><span>Register</span></button>
+      </div>
+      <div class="toggle-panel toggle-right">
+        <h1>Welcome Back!</h1>
+        <p>Already have an account?</p>
+        <button class="btn login-btn ripple"><span>Login</span></button>
       </div>
     </div>
   </div>
 
+  <!-- Recovery Modal -->
+  <div id="recoveryModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; justify-content:center; align-items:center;">
+    <div style="background:#0a0a0a; border:1px solid #ff4757; border-radius:20px; max-width:400px; width:90%; padding:20px;">
+      <h3 style="color:#ff4757;">Recover Member Code</h3>
+      <input id="recoveryAccessCode" class="input-dark" style="width:100%; margin:10px 0; padding:10px; background:#1a1a1a; border:1px solid #333; color:white;" placeholder="Your Access Code">
+      <div id="recoveryQuestionsArea"></div>
+      <button id="recoverySubmitBtn" class="btn-red ripple w-full"><span>Submit</span></button>
+      <button id="closeRecoveryModal" class="btn-outline ripple w-full mt-2"><span>Cancel</span></button>
+    </div>
+  </div>
+
+  <div id="toastContainer" style="position:fixed; bottom:20px; right:20px; z-index:9999;"></div>
+
   <script>
-    // ========== CONFIG & CONSTANTS ==========
+    // Ripple animation
+    function animateRipple(event) {
+      let target = event.target;
+      while (target && !target.classList.contains('ripple')) target = target.parentElement;
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const getProp = (key) => getComputedStyle(target).getPropertyValue(key);
+      if (parseFloat(getProp("--tapped")) === 1) return;
+      target.style.setProperty("--width", Math.max(rect.width, rect.height));
+      target.style.setProperty("--clientX", event.clientX - rect.left);
+      target.style.setProperty("--clientY", event.clientY - rect.top);
+      target.style.setProperty("--tapped", 1);
+      const dur = parseFloat(getProp("--duration")) || 600;
+      setTimeout(() => target.style.setProperty("--tapped", 0), dur);
+    }
+    addEventListener("click", animateRipple);
+    addEventListener("touchstart", (e) => { e.preventDefault(); animateRipple(e); }, {passive: false});
+
+    // ========== CONFIG ==========
     const FIREBASE_CONFIG = { apiKey:"AIzaSyAvq0v6LeGbB0FyOhvOGCoSmc0kogCZx_4", authDomain:"resistance-webapp.firebaseapp.com", projectId:"resistance-webapp", storageBucket:"resistance-webapp.firebasestorage.app", messagingSenderId:"985571028111", appId:"1:985571028111:web:53d7a322dd998d7ad814fa" };
     const BACKEND_URL = "https://quantam-ai-1am2.onrender.com";
     const TURNSTILE_SITE_KEY = document.querySelector('meta[name="turnstile-sitekey"]')?.content || "0x4AAAAAADB9qB6YsaSUFV0q";
     const MEMBER_CODES = { "AMI-021":"admin", "OE1-266":"moderator", "LAO-012":"leader", "MEI-021":"member" };
-    const COMMUNITIES = ["VibeVault","Onyx","RTCS","MTT"];
     const ADMIN_API_KEY = "super-secret-admin-key-change-me";
     const AI_MODELS = [ { id:"mistralai/Mistral-7B-Instruct-v0.3", name:"Mistral 7B v0.3", stars:4 }, { id:"microsoft/phi-2", name:"Phi-2", stars:4 }, { id:"google/gemma-7b", name:"Gemma 7B", stars:4 }, { id:"Qwen/Qwen3-8B", name:"Qwen3 8B", stars:3 }, { id:"meta-llama/Llama-3.2-1B-Instruct", name:"Llama 3.2 1B", stars:3 } ];
     const TRANSLATOR_MAP = { "A":"`","B":"~","C":"!","D":"@","E":"#","F":"$","G":"%","H":"^","I":"&","J":"*","K":"(","L":")","M":"-","N":"_","O":"=","P":"+","Q":"[","R":"]","S":"{","T":"}","U":"|","V":"\\","W":":","X":";","Y":"\"","Z":"'","0":"<","1":">","2":",","3":".","4":"/","5":"?","6":"a","7":"b","8":"c","9":"d"," ":"_" };
     const REVERSE_TRANSLATOR_MAP = Object.fromEntries(Object.entries(TRANSLATOR_MAP).map(([k,v])=>[v,k]));
 
-    // ========== INIT ==========
     firebase.initializeApp(FIREBASE_CONFIG);
     const db = firebase.firestore();
     const storage = firebase.storage();
@@ -168,49 +317,17 @@
     let currentTypingSpeed = 20;
     let randomModel = false;
     let selectedModel = AI_MODELS[0].id;
-    let chatUnsubscribe = null; // for listener cleanup
-    let currentChatPath = '';   // track active chat path
+    let chatUnsubscribe = null;
 
-    // ========== HELPERS ==========
     function escapeHTML(str) { if(!str) return ''; const d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
     function showToast(msg, isErr=false) { const t=document.createElement('div'); t.className='toast'+(isErr?' error':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
     function showError(msg) { document.getElementById('errorDisplay').style.display='block'; document.getElementById('errorDisplay').textContent=msg; }
     function getTurnstileToken() { return document.querySelector('[name="cf-turnstile-response"]')?.value; }
     async function sha256(str) { const buf=new TextEncoder().encode(str); const hash=await crypto.subtle.digest('SHA-256',buf); return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
-    // ========== AUTH ==========
-    async function login(accessCode, memberCode, turnstileToken) {
-      try {
-        const res = await fetch(BACKEND_URL+'/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accessCode,memberCode,turnstileToken}) });
-        if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
-        const userDoc = await db.collection('users').doc(accessCode).get();
-        if (!userDoc.exists) throw new Error('User not found');
-        currentUser = { accessCode, ...userDoc.data() };
-        localStorage.setItem('resistanceUser', JSON.stringify({ accessCode, role:currentUser.role }));
-        document.getElementById('authContainer').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        setOnlineStatus(true);
-        loadView('dashboard');
-      } catch(e) { showToast(e.message, true); }
-    }
-
-    async function signup(payload) {
-      const res = await fetch(BACKEND_URL+'/api/auth/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-      if (!res.ok) throw new Error((await res.json()).error || 'Signup failed');
-      return (await res.json()).accessCode;
-    }
-
-    async function setOnlineStatus(online) {
-      if (!currentUser) return;
-      await db.collection('users').doc(currentUser.accessCode).update({ online, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }).catch(console.error);
-    }
-    window.addEventListener('beforeunload', () => { if (currentUser) navigator.sendBeacon(BACKEND_URL+'/api/status', JSON.stringify({ accessCode:currentUser.accessCode, online:false })); });
-
-    // ========== TURNSTILE RESET ==========
     function resetCaptcha(containerId) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      // Remove existing widget and add a new one
       container.innerHTML = '';
       const newDiv = document.createElement('div');
       newDiv.className = 'cf-turnstile';
@@ -219,15 +336,41 @@
       if (window.turnstile) window.turnstile.render(newDiv);
     }
 
+    async function setOnlineStatus(online) {
+      if (!currentUser) return;
+      await db.collection('users').doc(currentUser.accessCode).update({ online, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }).catch(console.error);
+    }
+    window.addEventListener('beforeunload', () => { if (currentUser) navigator.sendBeacon(BACKEND_URL+'/api/status', JSON.stringify({ accessCode:currentUser.accessCode, online:false })); });
+
+    // ========== AUTH ==========
+    async function login(accessCode, memberCode, turnstileToken) {
+      const res = await fetch(BACKEND_URL+'/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accessCode,memberCode,turnstileToken}) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Login failed');
+      const userDoc = await db.collection('users').doc(accessCode).get();
+      if (!userDoc.exists) throw new Error('User not found');
+      currentUser = { accessCode, ...userDoc.data() };
+      localStorage.setItem('resistanceUser', JSON.stringify({ accessCode, role:currentUser.role }));
+      document.getElementById('authContainer').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      setOnlineStatus(true);
+      loadView('dashboard');
+    }
+
+    async function signup(payload) {
+      const res = await fetch(BACKEND_URL+'/api/auth/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Signup failed');
+      return (await res.json()).accessCode;
+    }
+
     // ========== VIEW ROUTER ==========
     async function loadView(view) {
-      // Clean up previous chat listener
       if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.nav-btn[data-view="${view}"]`)?.classList.add('active');
+      const active = document.querySelector(`.nav-btn[data-view="${view}"]`);
+      if (active) active.classList.add('active');
       const content = document.getElementById('mainContent');
       switch(view) {
-        case 'dashboard': content.innerHTML=`<div class="glass p-6"><h2 class="text-2xl font-bold text-red-500">Dashboard</h2><p class="mt-2">Welcome, ${escapeHTML(currentUser?.nickname||'')}</p></div>`; break;
+        case 'dashboard': content.innerHTML=`<div class="p-6"><h2 class="text-2xl font-bold text-red-500">Dashboard</h2><p class="mt-2">Welcome, ${escapeHTML(currentUser?.nickname||'')}</p></div>`; break;
         case 'profile': renderProfile(content); break;
         case 'global-chat': renderChat(content, 'global', 'globalMessages'); break;
         case 'community-chat': renderChat(content, 'community', `communities/${currentUser.communityId}/messages`); break;
@@ -243,54 +386,103 @@
       }
     }
 
-    // ========== CHAT RENDER (with listener cleanup) ==========
+    // ---------- PROFILE ----------
+    async function renderProfile(container) {
+      if (!currentUser) return;
+      const userDoc = await db.collection('users').doc(currentUser.accessCode).get();
+      const data = userDoc.data();
+      container.innerHTML = `<div class="p-6 max-w-lg"><h2 class="text-2xl font-bold text-red-500 mb-4">Profile</h2>
+        <p><strong>Access Code:</strong> ${currentUser.accessCode}</p>
+        <p><strong>Role:</strong> ${data.role}</p>
+        <p><strong>Community:</strong> ${data.communityId}</p>
+        <p><strong>Nickname:</strong> ${escapeHTML(data.nickname)}</p>
+        <p><strong>Real Name:</strong> ${escapeHTML(data.realName||'')}</p>
+        <p><strong>Bio:</strong> ${escapeHTML(data.bio||'')}</p>
+        <p><strong>Birthday:</strong> ${data.birthday||''}</p>
+        <p><strong>Hobby:</strong> ${escapeHTML(data.hobby||'')}</p>
+        <p><strong>Online:</strong> <span class="online-dot ${data.online?'online':'offline'}"></span>${data.online?'Online':'Offline'}</p>
+        ${data.photoURL?`<img src="${escapeHTML(data.photoURL)}" alt="Profile" class="w-24 h-24 rounded-full mt-2">`:''}
+        <button id="editProfileBtn" class="btn-outline ripple mt-4"><span>Edit Profile</span></button>
+      </div>`;
+      document.getElementById('editProfileBtn').onclick = () => renderProfileEdit(container, data);
+    }
+    function renderProfileEdit(container, data) {
+      container.innerHTML = `<div class="p-6 max-w-lg"><h2 class="text-2xl font-bold text-red-500 mb-4">Edit Profile</h2>
+        <input id="editNickname" class="input-dark mb-3" value="${escapeHTML(data.nickname||'')}">
+        <input id="editRealName" class="input-dark mb-3" value="${escapeHTML(data.realName||'')}">
+        <textarea id="editBio" class="input-dark mb-3" rows="2">${escapeHTML(data.bio||'')}</textarea>
+        <input id="editBirthday" class="input-dark mb-3" type="date" value="${data.birthday||''}">
+        <input id="editHobby" class="input-dark mb-3" value="${escapeHTML(data.hobby||'')}">
+        <input type="file" id="editProfilePic" accept="image/*" class="mb-3">
+        <button id="saveProfile" class="btn-red ripple w-full"><span>Save</span></button>
+        <button id="cancelEdit" class="btn-outline ripple w-full mt-2"><span>Cancel</span></button>
+      </div>`;
+      document.getElementById('saveProfile').onclick = async () => {
+        const updates = {
+          nickname: document.getElementById('editNickname').value.trim() || data.nickname,
+          realName: document.getElementById('editRealName').value.trim(),
+          bio: document.getElementById('editBio').value.trim(),
+          birthday: document.getElementById('editBirthday').value,
+          hobby: document.getElementById('editHobby').value.trim()
+        };
+        await db.collection('users').doc(currentUser.accessCode).update(updates);
+        const file = document.getElementById('editProfilePic').files[0];
+        if (file) {
+          try {
+            const ref = storage.ref(`profilePictures/${currentUser.accessCode}`);
+            await ref.put(file);
+            const url = await ref.getDownloadURL();
+            await db.collection('users').doc(currentUser.accessCode).update({ photoURL: url });
+          } catch(e) { showToast('Photo upload failed: '+e.message, true); }
+        }
+        showToast('Profile updated');
+        renderProfile(container);
+      };
+      document.getElementById('cancelEdit').onclick = () => renderProfile(container);
+    }
+
+    // ---------- CHAT ----------
     function renderChat(container, type, collectionPath) {
-      // Unsubscribe previous listener
       if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
-      container.innerHTML = `<div class="glass p-4 h-full flex flex-col"><div id="chatMessages" class="flex-1 overflow-y-auto mb-3 space-y-2"></div><div class="flex"><input id="chatInput" class="input-dark flex-1" placeholder="Message..."><button id="chatSend" class="btn-red ml-2 px-4">Send</button></div></div>`;
+      container.innerHTML = `<div class="flex flex-col h-full"><div id="chatMessages" class="flex-1 overflow-y-auto mb-3 space-y-2"></div><div class="flex"><input id="chatInput" class="input-dark flex-1" placeholder="Message..."><button id="chatSend" class="btn-red ripple ml-2 px-4"><span>Send</span></button></div></div>`;
       const msgsDiv = document.getElementById('chatMessages');
-      const path = collectionPath;
-      currentChatPath = path;
-      chatUnsubscribe = db.collection(path).orderBy('timestamp', 'asc').onSnapshot(snap => {
+      chatUnsubscribe = db.collection(collectionPath).orderBy('timestamp','asc').onSnapshot(snap => {
         msgsDiv.innerHTML = '';
         snap.forEach(doc => {
           const d = doc.data();
-          msgsDiv.innerHTML += `<div class="flex items-start"><span class="text-red-400 font-semibold mr-2">${escapeHTML(d.from)}:</span><span>${escapeHTML(d.content)}</span></div>`;
+          msgsDiv.innerHTML += `<div><strong class="text-red-400">${escapeHTML(d.from)}:</strong> ${escapeHTML(d.content)}</div>`;
         });
         msgsDiv.scrollTop = msgsDiv.scrollHeight;
       });
       document.getElementById('chatSend').onclick = async () => {
         const input = document.getElementById('chatInput');
         if (!input.value.trim()) return;
-        await db.collection(path).add({ from: currentUser.accessCode, content: input.value.trim(), timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection(collectionPath).add({ from: currentUser.accessCode, content: input.value.trim(), timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         input.value = '';
       };
     }
 
     function renderPrivateChat(container) {
-      // Simplified private chat: search for user by access code and start chat
-      container.innerHTML = `<div class="glass p-4"><input id="privateTarget" class="input-dark mb-4" placeholder="Enter target Access Code"><button id="startPrivate" class="btn-red">Start Chat</button><div id="privateChatArea" class="mt-4"></div></div>`;
+      container.innerHTML = `<div class="p-4"><input id="privateTarget" class="input-dark mb-4" placeholder="Enter target Access Code"><button id="startPrivate" class="btn-red ripple"><span>Start Chat</span></button><div id="privateChatArea" class="mt-4"></div></div>`;
       document.getElementById('startPrivate').onclick = async () => {
         const target = document.getElementById('privateTarget').value.trim();
         if (!target || target === currentUser.accessCode) return;
         const chatId = [currentUser.accessCode, target].sort().join('_');
         const chatRef = db.collection('privateChats').doc(chatId);
         await chatRef.set({ participants: [currentUser.accessCode, target] }, { merge: true });
-        // Render chat similar to renderChat but using privateChats/{chatId}/messages
         renderChat(document.getElementById('privateChatArea'), 'private', `privateChats/${chatId}/messages`);
       };
     }
 
     function renderAnnouncements(container) {
-      container.innerHTML = `<div class="glass p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Announcements</h2><div id="announceList" class="space-y-2"></div></div>`;
+      container.innerHTML = `<div class="p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Announcements</h2><div id="announceList" class="space-y-2"></div></div>`;
       db.collection('announcements').orderBy('timestamp','desc').onSnapshot(snap => {
-        const list = document.getElementById('announceList');
-        list.innerHTML = snap.docs.map(doc => `<div class="bg-gray-900 p-3 rounded"><strong class="text-red-400">${escapeHTML(doc.data().title)}</strong> - ${escapeHTML(doc.data().body)}</div>`).join('');
+        document.getElementById('announceList').innerHTML = snap.docs.map(doc => `<div class="bg-gray-900 p-3 rounded"><strong class="text-red-400">${escapeHTML(doc.data().title)}</strong> - ${escapeHTML(doc.data().body)}</div>`).join('');
       });
     }
 
     function renderEvents(container) {
-      container.innerHTML = `<div class="glass p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Events</h2><div id="eventList" class="space-y-2"></div><hr class="my-4 border-gray-700"><h3 class="text-lg font-semibold">Propose Event</h3><input id="eventTitle" class="input-dark mb-2" placeholder="Title"><textarea id="eventDesc" class="input-dark mb-2" rows="2" placeholder="Description"></textarea><input id="eventDate" class="input-dark mb-2" type="datetime-local"><button id="proposeEvent" class="btn-red">Propose</button></div>`;
+      container.innerHTML = `<div class="p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Events</h2><div id="eventList" class="space-y-2"></div><hr class="my-4 border-gray-700"><h3 class="text-lg font-semibold">Propose Event</h3><input id="eventTitle" class="input-dark mb-2" placeholder="Title"><textarea id="eventDesc" class="input-dark mb-2" rows="2" placeholder="Description"></textarea><input id="eventDate" class="input-dark mb-2" type="datetime-local"><button id="proposeEvent" class="btn-red ripple"><span>Propose</span></button></div>`;
       db.collection('events').orderBy('date','asc').onSnapshot(snap => {
         document.getElementById('eventList').innerHTML = snap.docs.map(doc => `<div class="bg-gray-900 p-3 rounded">${escapeHTML(doc.data().title)} - ${new Date(doc.data().date?.seconds*1000).toLocaleString()}</div>`).join('');
       });
@@ -300,12 +492,12 @@
         const date = document.getElementById('eventDate').value;
         if (!title || !date) return showToast('Title and date required', true);
         await db.collection('pendingEvents').add({ title, description:desc, date: new Date(date), proposedBy: currentUser.accessCode, communityId: currentUser.communityId, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        showToast('Event proposed, awaiting approval');
+        showToast('Event proposed');
       };
     }
 
     function renderFiles(container) {
-      container.innerHTML = `<div class="glass p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Files</h2><input type="file" id="fileUpload" class="mb-3"><button id="uploadFile" class="btn-red mb-4">Upload</button><div id="fileList"></div></div>`;
+      container.innerHTML = `<div class="p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Files</h2><input type="file" id="fileUpload" class="mb-3"><button id="uploadFile" class="btn-red ripple mb-4"><span>Upload</span></button><div id="fileList"></div></div>`;
       db.collection('files').orderBy('timestamp','desc').onSnapshot(snap => {
         document.getElementById('fileList').innerHTML = snap.docs.map(doc => `<div class="bg-gray-900 p-2 rounded mb-1"><a href="${escapeHTML(doc.data().url)}" target="_blank" class="text-red-400">${escapeHTML(doc.data().name)}</a></div>`).join('');
       });
@@ -321,8 +513,7 @@
     }
 
     function renderPolls(container) {
-      container.innerHTML = `<div class="glass p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Polls</h2><div id="pollList"></div><hr class="my-4 border-gray-700"><h3 class="text-lg font-semibold">Create Poll</h3><input id="pollQuestion" class="input-dark mb-2" placeholder="Question"><div id="pollOptions"><input class="input-dark mb-2" placeholder="Option 1"><input class="input-dark mb-2" placeholder="Option 2"></div><button id="addPollOption" class="text-red-400 text-sm mb-2">+ Add option</button><button id="createPoll" class="btn-red">Create Poll</button></div>`;
-      // Simplified: display polls
+      container.innerHTML = `<div class="p-4"><h2 class="text-xl font-bold text-red-500 mb-4">Polls</h2><div id="pollList"></div><hr class="my-4 border-gray-700"><h3 class="text-lg font-semibold">Create Poll</h3><input id="pollQuestion" class="input-dark mb-2" placeholder="Question"><div id="pollOptions"><input class="input-dark mb-2" placeholder="Option 1"><input class="input-dark mb-2" placeholder="Option 2"></div><button id="addPollOption" class="text-red-400 text-sm ripple mb-2"><span>+ Add option</span></button><button id="createPoll" class="btn-red ripple"><span>Create Poll</span></button></div>`;
       db.collection('polls').onSnapshot(snap => {
         document.getElementById('pollList').innerHTML = snap.docs.map(doc => `<div class="bg-gray-900 p-3 rounded mb-2">${escapeHTML(doc.data().question)}</div>`).join('');
       });
@@ -330,11 +521,10 @@
       document.getElementById('addPollOption').onclick = () => {
         if (optionCount >= 5) return;
         optionCount++;
-        const opts = document.getElementById('pollOptions');
         const inp = document.createElement('input');
         inp.className = 'input-dark mb-2';
         inp.placeholder = `Option ${optionCount}`;
-        opts.appendChild(inp);
+        document.getElementById('pollOptions').appendChild(inp);
       };
       document.getElementById('createPoll').onclick = async () => {
         const q = document.getElementById('pollQuestion').value.trim();
@@ -346,13 +536,13 @@
     }
 
     function renderTranslator(container) {
-      container.innerHTML = `<div class="glass p-4"><div class="grid grid-cols-2 gap-4"><div><textarea id="transInput" class="input-dark" placeholder="Input"></textarea><button id="encodeBtn" class="btn-red mt-2">Words → Code</button></div><div><textarea id="transOutput" class="input-dark" readonly></textarea><button id="decodeBtn" class="btn-red mt-2">Code → Words</button></div></div><button id="copyChart" class="btn-outline mt-4">Copy Chart</button></div>`;
-      document.getElementById('encodeBtn').onclick = () => { const val = document.getElementById('transInput').value.toUpperCase(); document.getElementById('transOutput').value = [...val].map(c => TRANSLATOR_MAP[c] || c).join(''); };
-      document.getElementById('decodeBtn').onclick = () => { const val = document.getElementById('transInput').value; document.getElementById('transOutput').value = [...val].map(c => REVERSE_TRANSLATOR_MAP[c] || c).join(''); };
+      container.innerHTML = `<div class="p-4"><div class="grid grid-cols-2 gap-4"><div><textarea id="transInput" class="input-dark" placeholder="Input"></textarea><button id="encodeBtn" class="btn-red ripple mt-2"><span>Words → Code</span></button></div><div><textarea id="transOutput" class="input-dark" readonly></textarea><button id="decodeBtn" class="btn-red ripple mt-2"><span>Code → Words</span></button></div></div><button id="copyChart" class="btn-outline ripple mt-4"><span>Copy Chart</span></button></div>`;
+      document.getElementById('encodeBtn').onclick = () => { document.getElementById('transOutput').value = [...document.getElementById('transInput').value.toUpperCase()].map(c => TRANSLATOR_MAP[c] || c).join(''); };
+      document.getElementById('decodeBtn').onclick = () => { document.getElementById('transOutput').value = [...document.getElementById('transInput').value].map(c => REVERSE_TRANSLATOR_MAP[c] || c).join(''); };
       document.getElementById('copyChart').onclick = () => { navigator.clipboard.writeText(Object.entries(TRANSLATOR_MAP).map(([k,v]) => `${k} → ${v}`).join('\n')); showToast('Chart copied'); };
     }
 
-    // ========== OMINUS AI ==========
+    // ---------- OMINUS AI ----------
     async function renderOmnius() {
       if (!currentUser) return;
       const convsRef = db.collection(`users/${currentUser.accessCode}/aiConversations`);
@@ -361,21 +551,20 @@
       else aiConversationId = snap.docs[0].id;
       const msgsSnap = await db.collection(`users/${currentUser.accessCode}/aiConversations/${aiConversationId}/messages`).orderBy('timestamp','asc').get();
       const messages = msgsSnap.docs.map(d => d.data());
-      const html = `
-        <div class="glass p-4 max-w-3xl mx-auto">
+      document.getElementById('mainContent').innerHTML = `
+        <div class="p-4 max-w-3xl mx-auto">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <select id="aiModelSelect" class="input-dark w-auto">${AI_MODELS.map(m=>`<option value="${m.id}" ${m.id===selectedModel?'selected':''}>${m.name} (${'★'.repeat(m.stars)})</option>`).join('')}</select>
-            <button id="aiRandomToggle" class="btn-outline px-3 py-1 text-sm ${randomModel?'bg-red-600 text-white':''}">🎲 Random</button>
+            <button id="aiRandomToggle" class="btn-outline ripple px-3 py-1 text-sm ${randomModel?'bg-red-600 text-white':''}"><span>🎲 Random</span></button>
           </div>
           <div id="aiMessages" class="h-80 overflow-y-auto mb-4 space-y-3">${messages.map(m=>m.role==='user'?`<div class="text-right"><span class="bg-red-800 px-4 py-2 rounded-xl inline-block max-w-[80%]">${escapeHTML(m.content)}</span></div>`:`<div>${parseAIResponse(m.content)}</div>`).join('')}</div>
           <textarea id="aiPrompt" class="input-dark mb-2" rows="2" placeholder="Ask Omnius..."></textarea>
           <div class="flex items-center gap-2">
-            <button id="aiSend" class="btn-red">Send</button>
+            <button id="aiSend" class="btn-red ripple"><span>Send</span></button>
             <span class="text-xs">Speed:</span><input type="range" id="aiSpeed" min="0" max="100" value="${currentTypingSpeed}" class="flex-1"><span id="speedValue" class="text-xs">${currentTypingSpeed}ms</span>
-            <button id="aiNewConv" class="btn-outline px-3 py-1 text-sm">New</button>
+            <button id="aiNewConv" class="btn-outline ripple px-3 py-1 text-sm"><span>New</span></button>
           </div>
         </div>`;
-      document.getElementById('mainContent').innerHTML = html;
       const aiMessages = document.getElementById('aiMessages');
       document.getElementById('aiModelSelect').onchange = e => selectedModel = e.target.value;
       document.getElementById('aiRandomToggle').onclick = function() { randomModel = !randomModel; this.classList.toggle('bg-red-600'); };
@@ -423,65 +612,10 @@
       return marked.parse(text);
     }
 
-    // ========== PROFILE ==========
-    async function renderProfile(container) {
-      if (!currentUser) return;
-      const userDoc = await db.collection('users').doc(currentUser.accessCode).get();
-      const data = userDoc.data();
-      container.innerHTML = `<div class="glass p-6 max-w-lg"><h2 class="text-2xl font-bold text-red-500 mb-4">Profile</h2><div class="space-y-3">
-        <p><strong>Access Code:</strong> ${currentUser.accessCode}</p>
-        <p><strong>Role:</strong> ${data.role}</p>
-        <p><strong>Community:</strong> ${data.communityId}</p>
-        <p><strong>Nickname:</strong> ${escapeHTML(data.nickname)}</p>
-        <p><strong>Real Name:</strong> ${escapeHTML(data.realName||'')}</p>
-        <p><strong>Bio:</strong> ${escapeHTML(data.bio||'')}</p>
-        <p><strong>Birthday:</strong> ${data.birthday||''}</p>
-        <p><strong>Hobby:</strong> ${escapeHTML(data.hobby||'')}</p>
-        <p><strong>Online:</strong> <span class="online-dot ${data.online?'online':'offline'}"></span>${data.online?'Online':'Offline'}</p>
-        ${data.photoURL?`<img src="${escapeHTML(data.photoURL)}" alt="Profile" class="w-24 h-24 rounded-full mt-2">`:''}
-        <button id="editProfileBtn" class="btn-outline">Edit Profile</button>
-      </div></div>`;
-      document.getElementById('editProfileBtn').onclick = () => renderProfileEdit(container, data);
-    }
-    function renderProfileEdit(container, data) {
-      container.innerHTML = `<div class="glass p-6 max-w-lg"><h2 class="text-2xl font-bold text-red-500 mb-4">Edit Profile</h2>
-        <input id="editNickname" class="input-dark mb-3" value="${escapeHTML(data.nickname||'')}">
-        <input id="editRealName" class="input-dark mb-3" value="${escapeHTML(data.realName||'')}">
-        <textarea id="editBio" class="input-dark mb-3" rows="2">${escapeHTML(data.bio||'')}</textarea>
-        <input id="editBirthday" class="input-dark mb-3" type="date" value="${data.birthday||''}">
-        <input id="editHobby" class="input-dark mb-3" value="${escapeHTML(data.hobby||'')}">
-        <input type="file" id="editProfilePic" accept="image/*" class="mb-3">
-        <button id="saveProfile" class="btn-red">Save</button>
-        <button id="cancelEdit" class="btn-outline mt-2">Cancel</button>
-      </div>`;
-      document.getElementById('saveProfile').onclick = async () => {
-        const updates = {
-          nickname: document.getElementById('editNickname').value.trim() || data.nickname,
-          realName: document.getElementById('editRealName').value.trim(),
-          bio: document.getElementById('editBio').value.trim(),
-          birthday: document.getElementById('editBirthday').value,
-          hobby: document.getElementById('editHobby').value.trim()
-        };
-        await db.collection('users').doc(currentUser.accessCode).update(updates);
-        const file = document.getElementById('editProfilePic').files[0];
-        if (file) {
-          try {
-            const ref = storage.ref(`profilePictures/${currentUser.accessCode}`);
-            await ref.put(file);
-            const url = await ref.getDownloadURL();
-            await db.collection('users').doc(currentUser.accessCode).update({ photoURL: url });
-          } catch(e) { showToast('Photo upload failed: '+e.message, true); }
-        }
-        showToast('Profile updated');
-        renderProfile(container);
-      };
-      document.getElementById('cancelEdit').onclick = () => renderProfile(container);
-    }
-
-    // ========== SETTINGS & DEVELOPER PANEL ==========
+    // ---------- SETTINGS & DEVELOPER PANEL ----------
     function renderSettings(container) {
-      container.innerHTML = `<div class="glass p-4"><h2 class="text-2xl font-bold text-red-500 mb-4">Settings</h2>
-        ${(currentUser.role==='admin'||currentUser.role==='moderator')?`<button id="openDevPanel" class="btn-outline">Developer Panel</button>`:''}
+      container.innerHTML = `<div class="p-4"><h2 class="text-2xl font-bold text-red-500 mb-4">Settings</h2>
+        ${(currentUser.role==='admin'||currentUser.role==='moderator')?`<button id="openDevPanel" class="btn-outline ripple"><span>Developer Panel</span></button>`:''}
       </div>`;
       if (currentUser.role==='admin'||currentUser.role==='moderator') {
         document.getElementById('openDevPanel').onclick = openDevPanel;
@@ -494,7 +628,7 @@
       }
       eruda.init(); eruda.show();
       if (currentUser.role === 'admin') {
-        const inspectorHTML = `<div class="glass p-4 mt-4 max-w-lg"><h3 class="text-red-400 font-bold mb-2">Message Inspector</h3><input id="inspectorInput" class="input-dark mb-2" placeholder="Target Access Code"><button id="inspectorBtn" class="btn-red">Inspect</button><pre id="inspectorResult" class="text-xs mt-2 overflow-auto max-h-60 bg-gray-900 p-2 rounded"></pre></div>`;
+        const inspectorHTML = `<div class="p-4 mt-4 max-w-lg"><h3 class="text-red-400 font-bold mb-2">Message Inspector</h3><input id="inspectorInput" class="input-dark mb-2" placeholder="Target Access Code"><button id="inspectorBtn" class="btn-red ripple"><span>Inspect</span></button><pre id="inspectorResult" class="text-xs mt-2 overflow-auto max-h-60 bg-gray-900 p-2 rounded"></pre></div>`;
         const div = document.createElement('div');
         div.innerHTML = inspectorHTML;
         document.getElementById('mainContent').appendChild(div);
@@ -511,21 +645,23 @@
     }
 
     // ========== EVENT LISTENERS ==========
-    // Login
-    document.getElementById('loginSubmit').onclick = async () => {
+    document.querySelector('.register-btn').addEventListener('click', () => document.getElementById('authContainer').classList.add('active'));
+    document.querySelector('.login-btn').addEventListener('click', () => document.getElementById('authContainer').classList.remove('active'));
+    document.getElementById('goToSignup').addEventListener('click', () => {
+      document.getElementById('authContainer').classList.add('active');
+      resetCaptcha('signupCaptcha');
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
       const ac = document.getElementById('loginAccessCode').value.trim();
       if (ac.length !== 9 || isNaN(+ac)) return showToast('Access Code must be 9 digits', true);
       const mc = document.getElementById('loginMemberCode').value.trim();
       const tk = getTurnstileToken();
       if (!tk) return showToast('Complete CAPTCHA', true);
-      await login(ac, mc, tk);
-    };
-    document.getElementById('goToSignup').onclick = () => {
-      document.getElementById('loginForm').style.display = 'none';
-      document.getElementById('signupForm').style.display = 'block';
-      resetCaptcha('signupCaptcha');
-    };
-    // Signup steps
+      try { await login(ac, mc, tk); } catch(e) { showToast(e.message, true); }
+    });
+
     document.getElementById('validateMemberCode').onclick = () => {
       const mc = document.getElementById('signupMemberCode').value.trim();
       const role = MEMBER_CODES[mc];
@@ -563,15 +699,7 @@
         });
         const token = getTurnstileToken();
         if (!token) return showToast('Complete CAPTCHA', true);
-        const accessCode = await signup({
-          memberCode: mc, role, communityId: community, nickname,
-          realName: document.getElementById('signupRealName').value.trim(),
-          bio: document.getElementById('signupBio').value.trim(),
-          birthday: document.getElementById('signupBirthday').value,
-          hobby: document.getElementById('signupHobby').value.trim(),
-          securityQuestions: await Promise.all(secQuestions.map(async q => ({ question: q.question, answerHash: await q.answerHash }))),
-          turnstileToken: token
-        });
+        const accessCode = await signup({ memberCode: mc, role, communityId: community, nickname, realName: document.getElementById('signupRealName').value.trim(), bio: document.getElementById('signupBio').value.trim(), birthday: document.getElementById('signupBirthday').value, hobby: document.getElementById('signupHobby').value.trim(), securityQuestions: await Promise.all(secQuestions.map(async q => ({ question: q.question, answerHash: await q.answerHash }))), turnstileToken: token });
         const file = document.getElementById('profilePicInput').files[0];
         if (file) {
           try {
@@ -584,25 +712,24 @@
         showToast('Account created! Access Code: ' + accessCode);
         document.getElementById('loginAccessCode').value = accessCode;
         document.getElementById('loginMemberCode').value = mc;
-        document.getElementById('signupForm').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('authContainer').classList.remove('active');
         resetCaptcha('loginCaptcha');
       } catch(e) { showToast(e.message, true); }
     };
-    // Recovery
-    document.getElementById('forgotCode').onclick = () => document.getElementById('recoveryModal').style.display = 'flex';
-    document.getElementById('closeRecovery').onclick = () => document.getElementById('recoveryModal').style.display = 'none';
-    document.getElementById('recoverySubmit').onclick = async () => {
+
+    document.getElementById('forgotCodeLink').onclick = () => { document.getElementById('recoveryModal').style.display = 'flex'; };
+    document.getElementById('closeRecoveryModal').onclick = () => { document.getElementById('recoveryModal').style.display = 'none'; };
+    document.getElementById('recoverySubmitBtn').onclick = async () => {
       const ac = document.getElementById('recoveryAccessCode').value.trim();
       if (!ac) return showToast('Enter Access Code', true);
       const user = await db.collection('users').doc(ac).get();
       if (!user.exists) return showToast('Not found', true);
       const questions = user.data().securityQuestions || [];
       if (!questions.length) return showToast('No security questions set', true);
-      const area = document.getElementById('recoveryQuestions');
+      const area = document.getElementById('recoveryQuestionsArea');
       area.innerHTML = '';
       questions.forEach((q, i) => { area.innerHTML += `<p class="text-white text-sm">${escapeHTML(q.question)}</p><input id="recAns${i}" class="input-dark mb-2">`; });
-      const verifyBtn = document.createElement('button'); verifyBtn.className = 'btn-red mt-2'; verifyBtn.textContent = 'Verify'; area.appendChild(verifyBtn);
+      const verifyBtn = document.createElement('button'); verifyBtn.className = 'btn-red ripple mt-2'; verifyBtn.innerHTML = '<span>Verify</span>'; area.appendChild(verifyBtn);
       verifyBtn.onclick = async () => {
         let match = true;
         for (let i = 0; i < questions.length; i++) {
@@ -616,18 +743,16 @@
         document.getElementById('recoveryModal').style.display = 'none';
       };
     };
-    // Logout
+
     document.getElementById('logoutBtn').onclick = async () => {
       if (currentUser) await setOnlineStatus(false);
       localStorage.removeItem('resistanceUser');
       location.reload();
     };
-    // Sidebar toggle mobile
     document.getElementById('sidebarToggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
-    // Nav buttons
     document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => { if (b.dataset.view) loadView(b.dataset.view); }));
 
-    // ========== AUTO LOGIN ==========
+    // Auto login
     (async () => {
       const saved = localStorage.getItem('resistanceUser');
       if (saved) {
@@ -648,4 +773,4 @@
   </script>
   <script> if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js'); </script>
 </body>
-        </html>
+  </html>
